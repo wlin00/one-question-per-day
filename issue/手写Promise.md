@@ -1,5 +1,4 @@
-实现Promise
-**核心：链式调用**的实现思路：
+**核心：链式调用的实现思路：**
   上一个Promise将控制权resolve给到return的新promise，让它将其当作onFulfilled方法使用。当下一个Promise状态改变后，调用此回调，则上一个Promise会拿到更新后的值并resolve，继续遍历callbacks。从而上一个Promise成功的获取到了下个Promise状态改变后的值而不是一个Promise对象，以此实现链式调用。
 
 ## 1、实现
@@ -72,7 +71,6 @@ class selfPromise {
 ```
 ## 2、使用
 ```javascript
-
 const promise11 = new selfPromise((resolve, reject) => {
   setTimeout(() => {
     resolve('resolve1')
