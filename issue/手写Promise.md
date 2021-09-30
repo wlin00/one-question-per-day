@@ -1,3 +1,66 @@
+**介绍：**
+  Promise是是异步编程的一种解决方案，相比传统的解决方案回调函数和事件，Promise具备更精简易懂的语法。使用上，Promise通过 **then** 方法的链式调用，使得多层的回调嵌套看起来变成了同一层。
+
+下面是回调函数和Promise的使用示例：
+```javascript
+// 回调函数
+http.get('url',function(res) {
+  console.log(res)
+})
+
+// Promise
+new Promise(function(resolve){
+  http.get('url',function(res){
+    resolve(res)
+  })
+}).then(function(item){
+  console.log(item)
+})
+```
+
+乍一看会感觉回调函数方法更加简洁，但当回调嵌套过多，会看到如下变化
+```javascript
+// 回调函数
+http.get('url1', function (param1) {
+    //do something
+    http.get('url2', function (param2) {
+        //do something
+        http.get('url3', function (param3) {
+            //dong something
+            http.get('url4', function (param4) {
+                //do something
+            })
+        })
+    })
+});
+```
+
+而Promise的写法则更加直观简洁
+```javascript
+//封装Promise
+function getUserId(url) {
+    return new Promise(function (resolve) {
+        //异步请求
+        http.get(url, function (id) {
+            resolve(id)
+        })
+    })
+}
+getUserId('some_url').then(function (id) {
+ 
+    return getNameById(id); // getNameById 是和 getUserId 类似的Promise封装。下同
+}).then(function (name) {
+
+    return getCourseByName(name);
+}).then(function (course) {
+
+    return getCourseDetailByCourse(course);
+}).then(function (courseDetail) {
+
+})
+```
+
+  
 **核心：链式调用的实现思路：**
   上一个Promise将控制权resolve给到return的新promise，让它将其当作onFulfilled方法使用。当下一个Promise状态改变后，调用此回调，则上一个Promise会拿到更新后的值并resolve，继续遍历callbacks。从而上一个Promise成功的获取到了下个Promise状态改变后的值而不是一个Promise对象，以此实现链式调用。
 
