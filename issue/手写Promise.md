@@ -18,7 +18,7 @@ new Promise(function(resolve){
 })
 ```
 
-乍一看会感觉回调函数方法更加简洁，但当回调嵌套过多，会看到如下变化
+上面的例子，看起来会感觉回调函数方法更加简洁，但当回调嵌套过多，会看到如下变化
 ```javascript
 // 回调函数
 http.get('url1', function (param1) {
@@ -47,19 +47,48 @@ function getUserId(url) {
     })
 }
 getUserId('some_url').then(function (id) {
- 
-    return getNameById(id); // getNameById 是和 getUserId 类似的Promise封装。下同
+    //do something
+    return getNameById(id); // getNameById 是和 getUserId 一样的Promise封装。下同
 }).then(function (name) {
-
+    //do something
     return getCourseByName(name);
 }).then(function (course) {
-
+    //do something
     return getCourseDetailByCourse(course);
 }).then(function (courseDetail) {
-
+    //do something
 })
 ```
 
+下面实现一个极简版的Promise：
+```javascript
+class selfPromise{
+  callbacks = []
+  constructor(fn) {
+    fn(this._resolve.bind(this))
+  }
+  _resolve(value) {
+    this.callbacks.forEach((callback) => callback(value))
+  }
+  then(onFulfilled) {
+    this.callbacks.push(onFulfilled)
+  }
+}
+
+// 使用
+new selfPromise((resolve) => {
+  setTimeout(() => {
+    resolve('done')
+  }, 5000)
+}).then((res) => {
+  console.log('res', res)
+})
+```
+上述代码中，主要思路是：1、先使用then方法，收集所有想要在异步操作成功后的函数，将其放入callbacks队列，实际上是注册回调函数，类似观察者模式；
+2、当异步操作成功后，会执行resolve方法，resolve会将callback异步函数队列中的方法取出来执行。
+
+----------------------------------------------------------------------------------------------------------------------------------------------------------------
+以上代码只实现了最基本功能，但这种方法没实现延时调用、链式调用、状态区分等大部分功能，这些功能的完成和思路将会后续在该文章中完善补充，下面我先贴出完整代码和核心思路。
   
 **核心：链式调用的实现思路：**
   上一个Promise将控制权resolve给到return的新promise，让它将其当作onFulfilled方法使用。当下一个Promise状态改变后，调用此回调，则上一个Promise会拿到更新后的值并resolve，继续遍历callbacks。从而上一个Promise成功的获取到了下个Promise状态改变后的值而不是一个Promise对象，以此实现链式调用。
