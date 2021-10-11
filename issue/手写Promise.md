@@ -1,3 +1,4 @@
+
 **介绍：**
   Promise是是异步编程的一种解决方案，相比传统的解决方案回调函数和事件，Promise具备更精简易懂的语法。使用上，Promise通过 **then** 方法的链式调用，使得多层的回调嵌套看起来变成了同一层。
 
@@ -84,15 +85,109 @@ new selfPromise((resolve) => {
   console.log('res', res)
 })
 ```
-上述代码中，主要思路是：1、先使用then方法，收集所有想要在异步操作成功后的函数，将其放入callbacks队列，实际上是注册回调函数，类似观察者模式；
+上述代码中，主要思路是：
+```
+1、先使用then方法，收集所有想要在异步操作成功后的回调函数，将其放入callbacks队列，实际上是注册回调函数，类似观察者模式；
+```
+```
 2、当异步操作成功后，会执行resolve方法，resolve会将callback异步函数队列中的方法取出来执行。
+```
+但上述代码只实现了最基本功能，有很多功能还未实现，例如延时机制、链式调用等功能。下面来实现更多功能
 
-----------------------------------------------------------------------------------------------------------------------------------------------------------------
-以上代码只实现了最基本功能，但这种方法没实现延时调用、链式调用、状态区分等大部分功能，这些功能的完成和思路将会后续在该文章中完善补充，下面我先贴出完整代码和核心思路。
+**一、延时机制**
+
+```javaScript
+// 当我们去除Promise的定时器
+new selfPromise((resolve) => {
+  resolve('done')
+}).then((res) => {
+  console.log('res', res)
+})
+
+// 输出undefined
+```
+可见去除resolve外部的定时器后，then中输出为undefined，原因是：在resolve执行的时候，then方法还未执行，所以没有回调函数注册，callbacks为一个空数组。
+为解决这一问题， 我们的最好方法是：添加状态标识，即Promise的三个状态，**PENDING**、**RESOLVE**，**REJECT**，代码如下：
+
+```javascript
+// 添加状态判断
+class selfPromise{
+  callbacks = []
+  value = null
+  state = 'PENDING'
+  constructor(fn) {
+    fn(this._resolve.bind(this))
+  }
+  _resolve(value) {
+    this.value = value
+    this.state = 'RESOLVE'
+    this.callbacks.forEach((callback) => callback(value))
+  }
+  then(onFulfilled) {
+    if (this.state === 'PENDING') {
+      this.callbacks.push(onFulfilled)
+    } else {
+      onFulfilled(this.value)
+    }
+  }
+}
+```
+
+可见加入了状态后，在**then**方法注册回调时，会根据状态判断，若是还未执行**resolve**方法，则注册回调函数；若已执行**resolve**，则then中会直接执行**onFulfilled**
+
+```javaScript
+// 当我们去除Promise的定时器
+new selfPromise((resolve) => {
+  resolve('done')
+}).then((res) => {
+  console.log('res', res)
+})
+
+// 输出'done'
+```
+
+**二、链式调用**
+
+Promise的链式调用，根据A+规范中要求，能够多次调用then方法。较容易想到的方式是在then方法中**return this**，这样可以多次调用**then**
+
+```javascript
+// 添加链式调用
+class selfPromise{
+  callbacks = []
+  value = null
+  state = 'PENDING'
+  constructor(fn) {
+    fn(this._resolve.bind(this))
+  }
+  _resolve(value) {
+    this.value = value
+    this.state = 'RESOLVE'
+    this.callbacks.forEach((callback) => callback(value))
+  }
+  then(onFulfilled) {
+    if (this.state === 'PENDING') {
+      this.callbacks.push(onFulfilled)
+    } else {
+      onFulfilled(this.value)
+    }
+    return this
+  }
+}
+
+// 调用
+new selfPromise(resolve => {
+  setTimeout(() => {
+      console.log('done');
+      resolve('5秒');
+  }, 5000);
+}).then(tip => {
+    console.log('then1', tip);
+}).then(tip => {
+    console.log('then2', tip);
+})
+```
+虽然以上方式能够实现多次调用then，但是可见多次then的结果都是同一个， 这样不符合Promise规范， 根据规范，我们需要在then方法中返回一个新的Promise。下面来实现真正的链式调用。
   
-**核心：链式调用的实现思路：**
-  上一个Promise将控制权resolve给到return的新promise，让它将其当作onFulfilled方法使用。当下一个Promise状态改变后，调用此回调，则上一个Promise会拿到更新后的值并resolve，继续遍历callbacks。从而上一个Promise成功的获取到了下个Promise状态改变后的值而不是一个Promise对象，以此实现链式调用。
-
 ## 完整实现
 ```javascript
 class selfPromise {
@@ -161,6 +256,9 @@ class selfPromise {
   }
 }
 ```
+**核心：链式调用的实现思路：**
+  上一个Promise将控制权resolve给到return的新promise，让它将其当作onFulfilled方法使用。当下一个Promise状态改变后，调用此回调，则上一个Promise会拿到更新后的值并resolve，继续遍历callbacks。从而上一个Promise成功的获取到了下个Promise状态改变后的值而不是一个Promise对象，以此实现链式调用。
+
 ## 2、使用
 ```javascript
 const promise11 = new selfPromise((resolve, reject) => {
@@ -186,3 +284,6 @@ promise11.then((res1) => {
 
 // 输出结果： then1:resolve1   then2:reolve2
 ```
+
+
+
