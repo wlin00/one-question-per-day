@@ -1,7 +1,7 @@
 ### 前言
 该文章，对webpack原理和源码进行分析
 
-### 第一章 - AST、Babel和依赖
+### 第一章 - AST、Babel和依赖
 
 ## babel原理
 1、parse - 通过@babel/parse 把代码转换成AST抽象语法树。
