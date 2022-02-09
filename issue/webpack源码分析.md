@@ -65,3 +65,57 @@ const result = babel.transformFromAstSync(ast, code, {
 // 将结果写到文件中
 fs.writeFileSync('./test.es5.js', result.code)
 ```
+
+### 示例3 - 对入口文件（code）进行递归的依赖分析
+``` typescript
+import { parse } from '@babel/parse'
+import traverse from '@babel/traverse'
+import { resolve, relative, dirname } from 'path'
+import { readFileSync } from 'fs'
+
+// 设置根目录 -- 获取需要解析的文件夹 - 根目录绝对路径
+// __dirname: 返回当前模块文件解析过后所在的文件夹(目录)的绝对路径。
+const projectRoot = resolve(__dirname, 'project_2')
+// 类型设置 - 设置存放依赖关系的map的类型
+type DepRelation = { [key: string]: { deps: string[], code: string } }
+// 初始化map
+const depRelation: DepRelation = {}
+
+// 获取项目路径方法
+const getProjectPath = (path: string) => { // 接收一个绝对路径， 返回相对于项目目录的相对路径
+  return relative(projectRoot, path).replace(/\\/g, '/')
+}
+
+// 递归依赖收集方法
+const collect = (filePath: string) => {
+  // 获取当前收集的文件的项目路径（文件相对于项目根目录的相对路径）
+  const key = getProjectPath(filePath)
+  // 获取源代码
+  const code = readFileSync(filePath).toString()
+  // 生成ast & map中记录当前依赖关系
+  const ast = parse(code, { sourceType: 'module' })
+  depRelation[key] = { 
+    deps: [],
+    code,
+   }
+  // 遍历ast， 进行依赖收集，且对于文件内部依赖的文件做递归分析
+  traverse(ast, {
+    enter: path => {
+      if (path.node.type ==== 'ImportDeclaration') {
+        // path.node.source.value 一般是一个相对路径，所以我们需要先转绝对路径， 再转项目路径用于依赖deps的收集
+        // dirname返回路径中代表文件夹的那部分
+        const depAbsolutePath = resolve(dirname(filePath), path.node.source.value) 
+        const depProjectPath = getProjectPath(depAbsolutePath)
+        // 依赖收集 & 递归分析
+        depRelation[key].deps.push(depProjectPath)
+        collect(depAbsolutePath)
+      }
+    }
+  })
+}
+
+// 执行 - 传入入口文件绝对路径
+collect(resolve(projectRoot, 'index.js'))
+
+console.log(depRelation)
+```
