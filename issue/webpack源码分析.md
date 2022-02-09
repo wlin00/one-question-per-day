@@ -65,7 +65,6 @@ const result = babel.transformFromAstSync(ast, code, {
 // 将结果写到文件中
 fs.writeFileSync('./test.es5.js', result.code)
 ```
-<<<<<<< HEAD
 
 ### 示例3 - 对入口文件（code）进行递归的依赖分析
 ``` typescript
@@ -120,5 +119,3 @@ collect(resolve(projectRoot, 'index.js'))
 
 console.log(depRelation)
 ```
-=======
->>>>>>> 243d4916f28e824aa603f9564acde09c679ceca3
