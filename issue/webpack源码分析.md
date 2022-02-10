@@ -90,6 +90,10 @@ const getProjectPath = (path: string) => { // 接收一个绝对路径， 返回
 const collect = (filePath: string) => {
   // 获取当前收集的文件的项目路径（文件相对于项目根目录的相对路径）
   const key = getProjectPath(filePath)
+  if (Object.keys(depRelation).includes(key)) {
+    console.warn(`duplicated dependency: ${key}`) // 监测到重复key 退出递归
+    return
+  }
   // 获取源代码
   const code = readFileSync(filePath).toString()
   // 生成ast & map中记录当前依赖关系
