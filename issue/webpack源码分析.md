@@ -157,7 +157,7 @@ export default b
 ```
 
 现在经过babel/core转换后的代码
-![Image text](https://raw.githubusercontent.com/wlin00/img/main/a1.png)
+![Image text](https://s3.bmp.ovh/imgs/2022/02/161270b06d6e4887.png)
 
 下面对转换后的代码进行理解
 ```
