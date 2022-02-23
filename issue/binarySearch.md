@@ -5,7 +5,7 @@
 function binarySearch(arr, target) {
   let low = 0, high = arr.length - 1, mid
   while (low <= high) {
-    mid = Math.floor(low + high) / 2
+    mid = Math.floor((low + high) / 2) //  或写成 mid = (low + high) >> 1, 区别： >>移位运算比除法操作性能好很多，另外就是考虑到大数溢出的情况，无符号移位不会有问题
     if (arr[mid] === target) {
       return mid
     } else if (arr[mid] > target) {
