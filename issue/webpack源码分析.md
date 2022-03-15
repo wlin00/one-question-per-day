@@ -491,3 +491,20 @@ writeFileSync('dist.js', generateCode())
   }
   module.exports = transform
 ```
+
+写完这个loader，我们需要记住关于loader的一些事
+```
+  1、单一职责原则，可见上面我们的loader做了两件事，转css为js 以及 插入代码到style标签 这其实不符合单一职责原则。
+  2、一个功能可能是由多个loader同时协同处理 ，例如sass-loader把scss文件转换为css；再由cssloader转css为js；再由style-loader创建style标签；
+```
+
+关于loader面试题
+```
+问：webpack的loader是什么？
+答：
+  1、webpack自带的打包器只能处理js文件；
+  2、当我们想加载css/less/scss/ts/md等文件时，就需要特定的loader来提供特殊功能；
+  3、laoder的原理是将文件内容包装成可用的js
+  4、例如：css-loader将css代码转换变成了export default str形式，来用于后续的str插入style标签；
+  5、深入了解源码需要学习：webpack的pitch钩子和request对象。
+```
