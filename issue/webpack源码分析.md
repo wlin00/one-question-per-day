@@ -508,3 +508,82 @@ writeFileSync('dist.js', generateCode())
   4、例如：css-loader将css代码转换变成了export default str形式，来用于后续的str插入style标签；
   5、深入了解源码需要学习：webpack的pitch钩子和request对象。
 ```
+
+
+
+## webpack源码阅读
+一、webpack-cli 是如何调用 webpack 的
+```JavaScript
+  1、在demo目录，运行node_modules/.bin/webpack-cli时，会借助webpack能力默认帮我们将入口/src/index.js打包成为main.js。
+  2、阅读webpack-cli源码，找到对应的主文件/lib/webpack-cli.js, 发现webpack-cli.js主要是调用了runCLI方法，而runCLI方法则主要是创建了一个WebpackCLI对象的实例；这个对象的原型上实现了一个run方法供于runCLI时调用
+  3、阅读WebpackCLI原型上的run方法，发现内部是require了webpack来作为其createCompiler能力
+    const webpack = packageExists('webpack') ? require('webpack') : undefined;
+    compiler = webpack(options, callback);
+```
+
+二、webpack如何分析index.js的
+```JavaScript
+  1、首先分析webpack是向外导出了什么文件，来提供了的打包能力；为此我们先看webpack/package.json文件，找到其主要导出文件"main":"lib/index.js"；
+  2、阅读"lib/index.js"源码，发现其核心向外导出了一个fn函数，这个函数的核心是require引入了相邻目录下的"./webpack.js";
+  3、阅读"lib/webpack.js"源码，发现其向外暴露了一个箭头函数webpack，而该函数内部是调用了"createCompiler"方法来创建解析器，该方法实质上是创建了一个"Compiler"类的实例：
+    const compiler = new Compiler(options.context);
+  然后触发了基于webpack官方库《tabable》绑定的，在这个实例上的几个事件：
+    compiler.hooks.environment.call();
+	  compiler.hooks.afterEnvironment.call();
+	  // new WebpackOptionsApply().process(options, compiler);
+    compiler.hooks.initialize.call();
+    
+```
+
+三、webpack整体流程
+```JavaScript
+  1、从"lib/webpack.js"里的createCompiler方法开始，触发了第一个由tabable绑定的事件，下面记录核心的事件&函数的执行顺序来整理体现出webpack的工作流程
+  2、顺序如下：
+    // lib/webpack.js中的createCompiler方法 - 创建解析器（return了一个Compiler类的实例）, 内部触发三个事件。
+    @environment
+    @afterEnvironment
+    @initialize
+
+    // lib/webpack.js主方法，创建compiler后，继续执行webpack.js主方法上的compiler.run
+    @beforeRun
+    @run
+    this.readRecords()
+    this.compile(onCompiled)
+    
+    // Compiler.compile - 编译流程
+    @beforeCompile // 预编译
+    @compile // 编译事件
+    this.newCompilation() // 生成一个新的编译
+      // newCompilation - 内部
+      this.createCompilation() // 初始化了一个“编译”
+      @thisCompilation
+      @compilation
+    @make
+    @finishMake    
+    compilation.finish
+      // compilation.finish - 内部
+      @finishModules
+    compilation.seal
+      // compilation.seal - 内部 - 优化
+      @seal
+      @afterOptimizeDependencies
+      @beforeChunks
+      this.addChunk(name)
+      this.buildChunkGraph()
+      @afterChunks
+      @optimize
+      @afterOptimizeModules
+      @afterOptimizeChunks
+      @optimizeTree
+    @afterCompile
+
+    // onConpiled的回调
+    @shouldEmit
+    this.emitAssets()
+    this.emitRecords()
+    @done
+
+
+    
+    
+```
