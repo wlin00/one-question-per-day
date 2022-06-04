@@ -160,7 +160,7 @@ export default b
 ![Image text](https://s3.bmp.ovh/imgs/2022/02/161270b06d6e4887.png)
 
 下面对转换后的代码进行理解
-```
+```javaScript
   疑惑1：声明一个对象变量exports，将一个key写为'_esModule', 对应value写为true,即是exports['_esModule'] = true，用于符合CommonJS书写规范和约定。
 
   疑惑2: 同理初始化 exports['_esModule'] = void 0 即undefined。
@@ -493,49 +493,35 @@ writeFileSync('dist.js', generateCode())
 ```
 
 写完这个loader，我们需要记住关于loader的一些事
-```
+```javaScript
   1、单一职责原则，可见上面我们的loader做了两件事，转css为js 以及 插入代码到style标签 这其实不符合单一职责原则。
   2、一个功能可能是由多个loader同时协同处理 ，例如sass-loader把scss文件转换为css；再由cssloader转css为js；再由style-loader创建style标签；
 ```
 
 关于loader面试题
-```
+```javaScript
 问：webpack的loader是什么？
 答：
   1、webpack自带的打包器只能处理js文件；
   2、当我们想加载css/less/scss/ts/md等文件时，就需要特定的loader来提供特殊功能；
-  3、laoder的原理是将文件内容包装成可用的js
+  3、laoder的原理是将文件转换成可处理的js（webpack由第三方库Acorn来进行JavaScriptParse）
   4、例如：css-loader将css代码转换变成了export default str形式，来用于后续的str插入style标签；
   5、深入了解源码需要学习：webpack的pitch钩子和request对象。
 ```
 
-
-
 ## webpack源码阅读
 一、webpack-cli 是如何调用 webpack 的
 ```JavaScript
-  1、在demo目录，运行node_modules/.bin/webpack-cli时，会借助webpack能力默认帮我们将入口/src/index.js打包成为main.js。
-  2、阅读webpack-cli源码，找到对应的主文件/lib/webpack-cli.js, 发现webpack-cli.js主要是调用了runCLI方法，而runCLI方法则主要是创建了一个WebpackCLI对象的实例；这个对象的原型上实现了一个run方法供于runCLI时调用
-  3、阅读WebpackCLI原型上的run方法，发现内部是require了webpack来作为其createCompiler能力
+  1、在demo目录，运行node_modules/.bin/webpack-cli时，会借助webpack能力默认帮我们将入口/src/index.js打包到dist目录成为main.js。
+  2、阅读webpack-cli源码，找到对应的主文件/lib/webpack-cli.js, 发现在控制台执行的webpack-cli的打包能力来自于webpack依赖里的bin目录下的cli.js
+  3、阅读bin/cli.js的代码，发现其调用了lib/bootstrap.js引导程序的能力，来创建了一个WebpackCli的实例，并调用了原型上的run方法
+  4、阅读lib/webpack-cli.js构造函数的代码，发现其原型上的run方法实际上是调用require了webpack的依赖来创建了一个解析器，即createCompiler。
     const webpack = packageExists('webpack') ? require('webpack') : undefined;
     compiler = webpack(options, callback);
+  5、总结：控制台中使用命令webpack-cli xxx.js，实际上是webpack-cli是通过调用了bin目录下的cli.js -> lib/boostrap.js的能力来创建了一个WebpackCli对象的实例并调用其原型上的run方法来导入webpack能力创建了一个解析器，从而完成对入口文件的打包。
 ```
 
-二、webpack如何分析index.js的
-```JavaScript
-  1、首先分析webpack是向外导出了什么文件，来提供了的打包能力；为此我们先看webpack/package.json文件，找到其主要导出文件"main":"lib/index.js"；
-  2、阅读"lib/index.js"源码，发现其核心向外导出了一个fn函数，这个函数的核心是require引入了相邻目录下的"./webpack.js";
-  3、阅读"lib/webpack.js"源码，发现其向外暴露了一个箭头函数webpack，而该函数内部是调用了"createCompiler"方法来创建解析器，该方法实质上是创建了一个"Compiler"类的实例：
-    const compiler = new Compiler(options.context);
-  然后触发了基于webpack官方库《tabable》绑定的，在这个实例上的几个事件：
-    compiler.hooks.environment.call();
-	  compiler.hooks.afterEnvironment.call();
-	  // new WebpackOptionsApply().process(options, compiler);
-    compiler.hooks.initialize.call();
-    
-```
-
-三、webpack整体流程
+二、webpack整体阶段
 ```JavaScript
   1、从"lib/webpack.js"里的createCompiler方法开始，触发了第一个由tabable绑定的事件，下面记录核心的事件&函数的执行顺序来整理体现出webpack的工作流程
   2、顺序如下：
@@ -543,13 +529,11 @@ writeFileSync('dist.js', generateCode())
     @environment
     @afterEnvironment
     @initialize
-
     // lib/webpack.js主方法，创建compiler后，继续执行webpack.js主方法上的compiler.run
     @beforeRun
     @run
     this.readRecords()
     this.compile(onCompiled)
-    
     // Compiler.compile - 编译流程
     @beforeCompile // 预编译
     @compile // 编译事件
@@ -582,8 +566,99 @@ writeFileSync('dist.js', generateCode())
     this.emitAssets()
     this.emitRecords()
     @done
-
-
-    
-    
 ```
+
+三、webpack如何分析index.js的
+```JavaScript
+  1、首先分析webpack是向外导出了什么文件，来提供了的打包能力；为此我们先看webpack/package.json文件，找到其主要导出文件"main":"lib/index.js"；
+  2、阅读"lib/index.js"源码，发现其核心向外导出了一个fn函数，这个函数的核心是require引入了相邻目录下的"./webpack.js";
+  3、阅读"lib/webpack.js"源码，发现其向外暴露了一个箭头函数webpack，而该函数内部是调用了"createCompiler"方法来创建解析器，该方法实质上是创建了一个"Compiler"类的实例：
+    const compiler = new Compiler(options.context);
+  然后触发了基于webpack官方库《tabable》绑定的，在这个实例上的几个事件：
+    compiler.hooks.environment.call();
+	  compiler.hooks.afterEnvironment.call();
+	  // new WebpackOptionsApply().process(options, compiler);
+    compiler.hooks.initialize.call();
+  4、通过以上操作持续分析webpack阅读源码，总结：
+    webpack使用其官方发布订阅的库Tapable作为事件中心，将打包过程分为了几个重要的阶段如：env、compile、compilation、make、finishMake、seal、emit等；
+    在make阶段，由入口插件（EntryPlugin.js）来完成对入口文件的解析 src/index.js；
+    并且在这个阶段创建了一个Module的数据结构（一般是NMF，normal module factory）来存储当前打包的文件依赖相关的信息；
+    在make阶段的buildModule事件里，webpack先通过执行runLoaders方法对非js文件进行处理，然后webpack借助第三方库Acorn处理js为AST（webpack的本职工作也是借助Acorn做JavaScriptParse），然后就可以对AST做traverse操作进行递归的依赖分析，一旦发现当前ast节点的type为‘ImportDeclaration’，就把这依赖的子文件添加到当前module的dependencies中；
+    在后面的seal阶段，这个阶段的主要职能是对module进行封装，webpack将module转化为一个或多个chunk；
+    seal之后，webpack为每个chunk创建文件（bundle），在emit阶段写文件到硬盘上。
+```
+
+四、webpack中，module、chunk、bundle的关系
+[参考链接](https://www.jianshu.com/p/040323107958)
+
+五、webpack的插件plugin介绍
+```javaScript
+  1、loader和plugin的关系
+    loader：loader是文件加载器，能够加载资源文件，并对文件做压缩、编译等处理，最终将处理的文件打包到结果的bundle文件中。
+    plugin：plugin是webpack的拓展器，在webpack运行的生命周期中会有多个阶段的事件（基于Tapable作为事件中心的发布订阅架构），而插件就是可以对webpack的每一个阶段做监听，可以插入到每一个打包阶段，来实现各式各样的功能，丰富webapck本身能力。
+  2、插件1：imagemin-webpack-plugin 能力：每次文件打包写文件前，检测当前依赖是否是图片，若是的话对其优化压缩，返回新的优化图片。
+    在 compiler.hooks.emit.tapAsync 的回调中执行插件能力（即监听emit阶段），遍历compilation.assets编译文件，若发现当前编译文件是图片则调用optimizeImage来优化图片。
+  3、插件2: clean-webpack-plugin 能力：每次文件打包写文件前，清空output输出目录；打包结束后，在done的事件阶段删除所有没用到的文件如垃圾文件、临时文件。
+    该插件会在compile.hooks.emit.tap 的回调中执行插件能力（即监听emit阶段），若本次编译没出错，则在写文件到硬盘之前，清空output输出目录的文件；
+    在done阶段，compile.hooks.done.tap 的回调中，遍历assets文件目录，删除所有要用的文件之外的文件如临时文件、垃圾文件。
+  4、插件3：ProvidePlugin 能力：帮用户全局引入某个依赖，让后续文件中不用再每次都引入。
+    该插件会在compile.hooks.compilation.tap 的回调中执行插件能力（即监听compilation阶段），该插件在compilation阶段获取到nmf普通模块工厂，并继续监听其原型上的parse事件（监听代码转换为ast的parse阶段）；该插件会在代码借助Acorn库转化为ast的过程中执行能力 - 遍历的 definition 配置，然后为当前模块引入所有 expression 表达式里用过的但未引入的依赖；
+    即一个全局注入引入依赖的能力，配置后就不用在每个文件import vue from 'vue'
+```
+
+六、写一个plugin的5个要点
+```javascript
+  1、向外导出一个JavaScript命名函数或一个类；
+  2、在插件函数的原型 or 类的方法上定义一个apply，webpack默认作为该插件能力；
+  3、监听一个webpack自身通过Tapable发布的事件（如compile.hooks.compilation.tap)；
+  4、webpack内部实例的数据处理；
+  5、功能完成后调用 webpack 提供的callback回调。
+```
+
+下面写一个插件，其功能是：生成一个叫做 assets.md 的新文件；文件内容是所有构建生成的文件的列表。
+```typescript
+  class FileListPlugin {
+    // 默认文件名
+    static defaultOptions = {
+      outputFile: 'assets.md'
+    }
+    constructor(options = {}) {
+      // 合并后的选项暴露给插件方法
+      this.options = { ...defaultOptions, ...options }
+    }
+    apply(compiler) {
+      const pluginName = FileListPlugin.name
+      // 当前webpack模块的实例，可以从compiler中解构获取
+      const { webpack } = compiler
+      // 再解构webpack实例获取Compilation对象，里面装了一些有用的常量
+      const { Compilation } = webpack
+      // RawSource 是一种源码类型，可以用它创建一个文件，然后在写文件的阶段emitAsset，额外地添加一个文件写到output目录
+      const { RawSource } = webpack.sources
+
+      // 监听webpack的thisCompilation阶段, 这个阶段可以获取compilation编译
+      compiler.hooks.thisCompilation.tap(pluginName, (compilation) => {
+        compilation.hooks.processAssets.tap({
+          name: pluginName,
+          // 用较靠后的资源处理阶段，保证当前processAssets阶段所有资源被添加到 compilation
+          stage: Compilation.PROCESS_ASSETS_STAGE_SUMMARIZE 
+        }, (assets) => {
+          // assets 是包含了当前编译中的所有资源的对象，key是资源路径 - value是源码
+          // 下面需要遍历所有资源，获取回车分割的文件路径列表的md文件源代码，然后经过RawSource封装一起emitAsset写到文件中
+          const content = '# In this build: \n\n' +
+            Object.keys(assets).map((filename) => `- ${filename}`).join('\n')
+
+          compilation.emitAsset(
+            this.options.outputFile,
+            new RawSource(content)
+          )  
+        })
+      })
+    }
+  }
+
+  module.exports = { FileListPlugin }
+```
+
+
+<!-- ```typescript
+``` -->

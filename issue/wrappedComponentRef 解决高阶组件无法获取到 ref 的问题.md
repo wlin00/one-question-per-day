@@ -47,8 +47,8 @@ const Parent = () => {
 
   // 通过ref访问子组件， 调用子组件内部方法
   const handleClick = () => {
-    if (useRef && useRef.handleSubmit) {
-      let res = await useRef.handleSubmit()
+    if (childRef && childRef.handleSubmit) {
+      let res = await childRef.handleSubmit()
       ...
     }
   }
