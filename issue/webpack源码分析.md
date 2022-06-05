@@ -696,5 +696,38 @@ writeFileSync('dist.js', generateCode())
         }
       ]
     }
-  }  
+  }
+
+  3、在webpack5中配置babel-react的预设能力，让webpack支持打包jsx文件
+  module.exports = {
+    mode: 'production',
+    module: {
+      rules: [
+        {
+          // 用babel-loader来处理js/jsx文件，而非用webpack默认能力打包
+          // 这样方便拓展更多能力
+          test: /\.jsx?$/,
+          exclude: /node_modules/, // 遇到node_modules文件不处理，因为这些文件都默认打包过
+          use: {
+            loader: 'babel-loader',
+            options: {
+              presets: [
+                ['@babel/preset-env'], // 使用babel-loader预设能力处理js文件，env是根据环境自动变化的一个推荐包
+                ['@babel/preset-react'], // 使用babel-react预设能力处理jsx文件
+              ]
+            }
+          }
+        }
+      ]
+    }
+  }
+
+  配置后，可以支持在入口文件中引入jsx，webpack在递归依赖分析的时候能够处理
+  jsx文件如：
+  const jsxDemo = () => {
+    return (
+      <div>jsxDemo</div>
+    )
+  }
+  export { jsxDemo }
 ```
