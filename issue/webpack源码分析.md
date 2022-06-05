@@ -660,5 +660,41 @@ writeFileSync('dist.js', generateCode())
 ```
 
 
-<!-- ```typescript
-``` -->
+七、webpack高级配置
+```javascript
+  1、让webpack5支持ie浏览器（因webpack5开始不默认支持ie）,做法是在.browserslistrc文件里配置兼容浏览器
+  代码：
+    [production] // 开发环境
+    > 1% // 支持全世界 > 1%的浏览器 + ie9
+    ie 9
+
+    [modern]
+    last 1 chrome version // 支持最新的1个谷歌和火狐浏览器
+    last 1 firefox version
+
+    [ssr]
+    node 12
+
+  2、在webpack5中使用babel-loader来打包js/jsx文件
+  module.exports = {
+    mode: 'production',
+    module: {
+      rules: [
+        {
+          // 用babel-loader来处理js/jsx文件，而非用webpack默认能力打包
+          // 这样方便拓展更多能力
+          test: /\.jsx?$/,
+          exclude: /node_modules/, // 遇到node_modules文件不处理，因为这些文件都默认打包过
+          use: {
+            loader: 'babel-loader',
+            options: {
+              presets: [
+                ['@babel/preset-env'] // 使用babel-loader预设能力处理js/jsx文件，env是根据环境自动变化的一个推荐包
+              ]
+            }
+          }
+        }
+      ]
+    }
+  }  
+```
