@@ -730,4 +730,47 @@ writeFileSync('dist.js', generateCode())
     )
   }
   export { jsxDemo }
+
+  4、通过引入插件来让webpack打包时，能使用Eslint来找到代码中的错误; 以及每次打包前清空output目录；
+  const { CleanWebpackPlugin } = require('clean-webpack-plugin')
+  const EslintPlugin = require('eslint-webpack-plugin')
+
+  module.exports = {
+    mode: 'production',
+    plugins: [
+      new CleanWebpackPlugin(), // emit阶段写文件前清空output目录，done阶段清空assets目录无用、过期的文件；
+      new EslintPlugin( // 让webpack打包时，能使用Eslint去找到代码中的错误
+        { extensions: ['.js', '.jsx'] }
+      ), 
+    ],
+    module: {
+      rules: [
+        {
+          // 用babel-loader来处理js/jsx文件，而非用webpack默认能力打包
+          // 这样方便拓展更多能力
+          test: /\.jsx?$/,
+          exclude: /node_modules/, // 遇到node_modules文件不处理，因为这些文件都默认打包过
+          use: {
+            loader: 'babel-loader',
+            options: {
+              presets: [
+                ['@babel/preset-env'], // 使用babel-loader预设能力处理js文件，env是根据环境自动变化的一个推荐包
+                ['@babel/preset-react'], // 使用babel-react预设能力处理jsx文件
+              ]
+            }
+          }
+        }
+      ]
+    }
+  }
+
+  然后看eslint中的配置
+  module.exports = {
+    extends: ['react-app'], // 继承react官方配置规则
+    rules: {
+      'react/jsx-uses-react': [2], // 要在jsx文件里使用react，括号内：0 - 错误时不限制； 1 - 错误时警告；2 - 错误时报错；
+      'react/react-in-jsx-scope': [2], // 要在jsx中import React from 'react'
+    }
+  }
+
 ```
