@@ -675,7 +675,7 @@ writeFileSync('dist.js', generateCode())
     [ssr]
     node 12
 
-  2、在webpack5中使用babel-loader来打包js/jsx文件
+  2、在webpack5中使用babel-loader来打包js文件
   module.exports = {
     mode: 'production',
     module: {
@@ -683,7 +683,7 @@ writeFileSync('dist.js', generateCode())
         {
           // 用babel-loader来处理js/jsx文件，而非用webpack默认能力打包
           // 这样方便拓展更多能力
-          test: /\.jsx?$/,
+          test: /\.js$/,
           exclude: /node_modules/, // 遇到node_modules文件不处理，因为这些文件都默认打包过
           use: {
             loader: 'babel-loader',
