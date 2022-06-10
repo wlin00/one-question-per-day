@@ -1146,6 +1146,17 @@ writeFileSync('dist.js', generateCode())
       }),
     ].filter(Boolean)
 
+    多页面配置后，记得在splitChunks中加入common chunks配置
+    配置common属性，可以在多页面打包的情况下，将多个页面都用到的依赖单独打包，这样就不用每个页面都打包一次；
+    splitChunks: {
+      common: {
+        priority: 5, // 区分打包优先级，如具体打到common chunks、vendor chunks（第三方包）哪个里面，
+        minSize: 0, // 不管这个共同引入的包多小都单独打包,
+        minChunks: 2, // 最少两个页面共同使用就独立打包，
+        chunks: 'all', // all 表示把来自node依赖的同步加载(initial)和异步加载(async)的都单独打包
+        name: 'common', // 单独打包输出到dist目录命名为 common.[hash]?.js
+      }
+    }
 
 ```
 
