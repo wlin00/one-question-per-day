@@ -1107,15 +1107,23 @@ writeFileSync('dist.js', generateCode())
     三、（splitChunks）单独打包 node_modules 中的依赖如react和vue：
       1、由于react、vue这些依赖不常升级改变；所以在编译的时候，为了能缓存之前的依赖，我们配置splitChunks来单独打包 node依赖
       2、为了用户缓存考虑，类似runtime单独打包，若只升级node依赖、而源文件代码未改变，用户还是可以使用同一个main.js缓存，节省带宽；
-      splitChunks: {
-        cacheGroups: {
-          vendor: {
-            minSize: 0, // 不管这个node的包多小都单独打包
-            test: /[\\/]node_modules[\\/]/, // 匹配/node_modules/ 和 \node_modules\
-            name: 'vendor', // 单独打包输出到dist目录命名为 vendor.[hash]?.js
-            chunks: 'all', // all 表示把来自node依赖的同步加载(initial)和异步加载(async)的都单独打包
+      optimization: {
+        splitChunks: {
+          cacheGroups: {
+            vendor: {
+              minSize: 0, // 不管这个node的包多小都单独打包
+              test: /[\\/]node_modules[\\/]/, // 匹配/node_modules/ 和 \node_modules\
+              name: 'vendor', // 单独打包输出到dist目录命名为 vendor.[hash]?.js
+              chunks: 'all', // all 表示把来自node依赖的同步加载(initial)和异步加载(async)的都单独打包
+            }
           }
         }
+      }
+    
+    四、（moduleIds）固定模块id
+      webpack打包时，会按一定顺序对模块编号；为保证用户能尽量缓存使用已经下载的没有变化的文件，则将没变化的模块id（文件名）固定；
+      optimization: {
+        moduleIds: 'deterministic',
       }
 ```
 
