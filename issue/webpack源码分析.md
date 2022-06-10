@@ -608,7 +608,7 @@ writeFileSync('dist.js', generateCode())
         插件4: MiniCssExtractPlugin，用于在生产环节单独提取css文件到独立的bundle。
         插件5: EslintPlugin，让webpack打包时，能对代码进行esLint的校验。
         插件6: HtmlWebpackPlugin，文件打包时，自动生成html页面。
-        插件7: WorkboxWebpackPlugin，提供pwa能力：如果访问一个网站时，服务器挂掉时，本地可以利用缓存依然呈现出之前的页面。（PWA：借助 Service Worker、离线存储、后台同步等技术来提供离线处理能力，让我们的页面在访问一次以后，再次访问时能被缓存住）
+        插件7: WorkboxWebpackPlugin，提供pwa能力：如果访问一个网站时，服务器挂掉时，本地可以利用缓存依然呈现出之前的页面。（PWA：借助 Service Worker、离线存储、后台同步等技术来提供离线处理能力，让我们的页面在访问一次以后，再次访问时能读取上一次的缓存）
 
   
 ```
