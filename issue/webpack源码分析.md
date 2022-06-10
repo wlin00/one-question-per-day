@@ -1125,5 +1125,27 @@ writeFileSync('dist.js', generateCode())
       optimization: {
         moduleIds: 'deterministic',
       }
+  
+  11、多页面、多入口打包
+    配置entry, 为各个入口文件配置前缀key
+    entry: {
+      index: './src/index.js',
+      admin: './src/admin.js',
+    }
+
+    然后在HtmlWebpackPlugin中配置生成的页面所对应的入口文件
+    plugins: [
+      // 自动生成html页面，多页面配置时，按页面数量配置HtmlWebpackPlugin
+      new HtmlWebpackPlugin({
+        filename: 'index.html', // 生成的文件名
+        chunks: ['index'], // 对应的入口文件
+      }),
+      new HtmlWebpackPlugin({
+        filename: 'admin.html', // 生成的文件名
+        chunks: ['admin'], // 对应的入口文件
+      }),
+    ].filter(Boolean)
+
+
 ```
 
