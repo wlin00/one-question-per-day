@@ -583,7 +583,7 @@ writeFileSync('dist.js', generateCode())
     webpack使用其官方发布订阅的库Tapable作为事件中心，将打包过程分为了几个重要的阶段如：env、compile、compilation、make、finishMake、seal、emit等；
     在make阶段，由入口插件（EntryPlugin.js）来完成对入口文件的解析 src/index.js；
     并且在这个阶段创建了一个Module的数据结构（一般是NMF，normal module factory）来存储当前打包的文件依赖相关的信息；
-    在make阶段的buildModule事件里，webpack先通过执行runLoaders方法对非js文件进行处理，然后webpack借助第三方库Acorn处理js为AST（webpack的本职工作也是借助Acorn做JavaScriptParse），然后就可以对AST做traverse操作进行递归的依赖分析，一旦发现当前ast节点的type为‘ImportDeclaration’，就把这依赖的子文件添加到当前module的dependencies中；
+    在make阶段的buildModule事件里，webpack先通过执行runLoaders方法对非js文件进行处理，然后webpack借助第三方库Acorn处理js为AST（webpack的本职工作也是借助Acorn做JavaScriptParse），然后就可以对AST做traverse操作进行递归的依赖分析，一旦发现当前ast节点的type为‘ImportDeclaration’，就把这依赖的子文件添加到当前module的dependencies中并递归依赖分析；
     在后面的seal阶段，这个阶段的主要职能是对module进行封装，webpack将module转化为一个或多个chunk；
     seal之后，webpack为每个chunk创建文件（bundle），在emit阶段写文件到硬盘上。
 ```
@@ -603,7 +603,10 @@ writeFileSync('dist.js', generateCode())
     在done阶段，compile.hooks.done.tap 的回调中，遍历assets文件目录，删除所有要用的文件之外的文件如临时文件、垃圾文件。
   4、插件3：ProvidePlugin 能力：帮用户全局引入某个依赖，让后续文件中不用再每次都引入。
     该插件会在compile.hooks.compilation.tap 的回调中执行插件能力（即监听compilation阶段），该插件在compilation阶段获取到nmf普通模块工厂，并继续监听其原型上的parse事件（监听代码转换为ast的parse阶段）；该插件会在代码借助Acorn库转化为ast的过程中执行能力 - 遍历的 definition 配置，然后为当前模块引入所有 expression 表达式里用过的但未引入的依赖；
-    即一个全局注入引入依赖的能力，配置后就不用在每个文件import vue from 'vue'
+    即一个全局注入引入依赖的能力，配置后就不用在每个文件import vue from 'vue'。
+  5、插件4: MiniCssExtractPlugin，用于在生产环节单独提取css文件到独立的bundle。
+  6、插件5: EslintPlugin，让webpack打包时，能对代码进行esLint的校验。
+  7、插件6: HtmlWebpackPlugin，文件打包时，自动生成html页面。
 ```
 
 六、写一个plugin的5个要点
@@ -1085,5 +1088,34 @@ writeFileSync('dist.js', generateCode())
       ]
     }
   }
+
+  10、webpack的一些优化配置：
+    一、（runtimeChunk）单独打包运行时文件 runtime（即 webpack 为了让浏览器能执行我们打包后的代码，所需要的额外代码文件）
+    作用：如果我们是单独打包 runtime， 在升级 webpack 版本等操作的时候（未动到打包文件源码），这样打包后的main.js不会改变，用户还是可以使用同一个main.js缓存，为用户节省带宽降低打开页面用时，提升体验。
+    optimization: {
+      runtimeChunk: 'single'
+    }
+
+    二、（usedExports）在开发环境，如果需要开启tree-shaking配置（生产环境默认开启）, 但webpack其实不会真正在开发环境去除不用的文件，而只是做标记
+    optimization: {
+      // tree-shaking：在es-module中，只去打包项目使用到的模块, 配置的话是开启usedExports: true;
+      // 并在 package.json 的 sideEffects 中配置上不希望tree-shaking掉的依赖如："sideEffects": ['@babel/polly-fill'],这样避免一些不需要引入的包被shaking掉。
+      // 若没有不想被shaking掉的包，则sideEffect设置为不去除css文件即可,如 "sideEffects": ["*.css"]
+      usedExports: true
+    }
+
+    三、（splitChunks）单独打包 node_modules 中的依赖如react和vue：
+      1、由于react、vue这些依赖不常升级改变；所以在编译的时候，为了能缓存之前的依赖，我们配置splitChunks来单独打包 node依赖
+      2、为了用户缓存考虑，类似runtime单独打包，若只升级node依赖、而源文件代码未改变，用户还是可以使用同一个main.js缓存，节省带宽；
+      splitChunks: {
+        cacheGroups: {
+          vendor: {
+            minSize: 0, // 不管这个node的包多小都单独打包
+            test: /[\\/]node_modules[\\/]/, // 匹配/node_modules/ 和 \node_modules\
+            name: 'vendor', // 单独打包输出到dist目录命名为 vendor.[hash]?.js
+            chunks: 'all', // all 表示把来自node依赖的同步加载(initial)和异步加载(async)的都单独打包
+          }
+        }
+      }
 ```
 
