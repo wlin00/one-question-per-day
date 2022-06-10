@@ -596,17 +596,21 @@ writeFileSync('dist.js', generateCode())
   1、loader和plugin的关系
     loader：loader是文件加载器，能够加载资源文件，并对文件做压缩、编译等处理，最终将处理的文件打包到结果的bundle文件中。
     plugin：plugin是webpack的拓展器，在webpack运行的生命周期中会有多个阶段的事件（基于Tapable作为事件中心的发布订阅架构），而插件就是可以对webpack的每一个阶段做监听，可以插入到每一个打包阶段，来实现各式各样的功能，丰富webapck本身能力。
-  2、插件1：imagemin-webpack-plugin 能力：每次文件打包写文件前，检测当前依赖是否是图片，若是的话对其优化压缩，返回新的优化图片。
-    在 compiler.hooks.emit.tapAsync 的回调中执行插件能力（即监听emit阶段），遍历compilation.assets编译文件，若发现当前编译文件是图片则调用optimizeImage来优化图片。
-  3、插件2: clean-webpack-plugin 能力：每次文件打包写文件前，清空output输出目录；打包结束后，在done的事件阶段删除所有没用到的文件如垃圾文件、临时文件。
-    该插件会在compile.hooks.emit.tap 的回调中执行插件能力（即监听emit阶段），若本次编译没出错，则在写文件到硬盘之前，清空output输出目录的文件；
-    在done阶段，compile.hooks.done.tap 的回调中，遍历assets文件目录，删除所有要用的文件之外的文件如临时文件、垃圾文件。
-  4、插件3：ProvidePlugin 能力：帮用户全局引入某个依赖，让后续文件中不用再每次都引入。
-    该插件会在compile.hooks.compilation.tap 的回调中执行插件能力（即监听compilation阶段），该插件在compilation阶段获取到nmf普通模块工厂，并继续监听其原型上的parse事件（监听代码转换为ast的parse阶段）；该插件会在代码借助Acorn库转化为ast的过程中执行能力 - 遍历的 definition 配置，然后为当前模块引入所有 expression 表达式里用过的但未引入的依赖；
-    即一个全局注入引入依赖的能力，配置后就不用在每个文件import vue from 'vue'。
-  5、插件4: MiniCssExtractPlugin，用于在生产环节单独提取css文件到独立的bundle。
-  6、插件5: EslintPlugin，让webpack打包时，能对代码进行esLint的校验。
-  7、插件6: HtmlWebpackPlugin，文件打包时，自动生成html页面。
+      下面记录一些用到过的插件：
+        插件1：imagemin-webpack-plugin 能力：每次文件打包写文件前，检测当前依赖是否是图片，若是的话对其优化压缩，返回新的优化图片。
+        在 compiler.hooks.emit.tapAsync 的回调中执行插件能力（即监听emit阶段），遍历compilation.assets编译文件，若发现当前编译文件是图片则调用optimizeImage来优化图片。
+        插件2: clean-webpack-plugin 能力：每次文件打包写文件前，清空output输出目录；打包结束后，在done的事件阶段删除所有没用到的文件如垃圾文件、临时文件。
+        该插件会在compile.hooks.emit.tap 的回调中执行插件能力（即监听emit阶段），若本次编译没出错，则在写文件到硬盘之前，清空output输出目录的文件；
+        在done阶段，compile.hooks.done.tap 的回调中，遍历assets文件目录，删除所有要用的文件之外的文件如临时文件、垃圾文件。
+        插件3：ProvidePlugin 能力：帮用户全局引入某个依赖，让后续文件中不用再每次都引入。
+        该插件会在compile.hooks.compilation.tap 的回调中执行插件能力（即监听compilation阶段），该插件在compilation阶段获取到nmf普通模块工厂，并继续监听其原型上的parse事件（监听代码转换为ast的parse阶段）；该插件会在代码借助Acorn库转化为ast的过程中执行能力 - 遍历的 definition 配置，然后为当前模块引入所有 expression 表达式里用过的但未引入的依赖；
+        即一个全局注入引入依赖的能力，配置后就不用在每个文件import vue from 'vue'。
+        插件4: MiniCssExtractPlugin，用于在生产环节单独提取css文件到独立的bundle。
+        插件5: EslintPlugin，让webpack打包时，能对代码进行esLint的校验。
+        插件6: HtmlWebpackPlugin，文件打包时，自动生成html页面。
+        插件7: WorkboxWebpackPlugin，提供pwa能力：如果访问一个网站时，服务器挂掉时，本地可以利用缓存依然呈现出之前的页面。（PWA：借助 Service Worker、离线存储、后台同步等技术来提供离线处理能力，让我们的页面在访问一次以后，再次访问时能被缓存住）
+
+  
 ```
 
 六、写一个plugin的5个要点
