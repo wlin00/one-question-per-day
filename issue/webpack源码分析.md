@@ -1204,7 +1204,7 @@ writeFileSync('dist.js', generateCode())
       }
 ```
 
-八、webpack配置文件代码示例
+八、webpack 配置代码示例
 ```typescript
   const EsLintPlugin = require('eslint-webpack-plugin');
   const { CleanWebpackPlugin } = require('clean-webpack-plugin');
