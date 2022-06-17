@@ -192,5 +192,135 @@ Flow 的两个工作方式
       3、这些配置经过处理转化成了符合rollup规范的对象；在build.js中，收集完配置，就遍历筛选后的配置对象数组，链式调用进行相应配置文件的打包。 
   ```
 
+  四、分析 `Vue.js` 构建的入口文件
+  - 刚才分析了Vue的构建过程，现在分析一下Vue暴露出的打包入口文件，即Vue的初始化过程。
+  实际上我们看到，Vue的核心就是一个用 Function 实现的类，我们只能通过 new Vue 去实例化它。然后通过Mixin，又给Vue挂载了很多原型上的方法；通过initGlobalAPI又给Vue添加了很多静态方法，以便后续的调用。
+
+  - 以 `Runtime + Compiler` 的Vue版本为例分析
+    首先我们先看我们引入的vue到底是什么，我们在node-modules里看package.json的main可以找到`dist/vue.runtime.common.js`文件，而由vue源码的配置表可以看到这个出口文件的对应入口文件为： `web/entry-runtime-with-compiler` ，我们沿着该文件向下寻找，可以找到Vue 的真实面目在 `core/instance/index.js`里；
+    它实际上就是一个函数作为了构造函数，这样的好处是：可以方便后面的各种方法继续去拓展类的功能，而不是所有能力全定义在一个class里，这样的好处是便于维护拓展；
+    ```typescript
+      // core/instance/index.js
+      function Vue (options) {
+        if (process.env.NODE_ENV !== 'production' && 
+          !(this instanceof Vue)
+        ) {
+          // Vue 是一个构造函数，需要结合new使用，即const a = new Vue({})；而不是直接const a = Vue() 将其当作普通函数；
+          warn('Vue is a constructor and should be called with the `new` keyword')
+        }
+        this._init(options)
+      }
+      // 给Vue的原型上添加方法，这些函数都是和组件实例相关的
+      initMixin(Vue)
+      stateMixin(Vue)
+      eventsMixin(Vue)
+      lifecycleMixin(Vue)
+      renderMixin(Vue)
+      export default Vue
+    ```
+    这些Mixin 都是在Vue的 `prototype` 添加方法，这些方法是和组件实例相关；
+    可见Vue按功能将这些 `能力拓展` 给拆分到多个模块里实现，这也是用函数作为构造函数的好处；
+
+  - 在外层，Vue由对这个暴露出去的`Vue`对象做了更多能力拓展封装，如在 `initGlobalAPI(Vue)`中，Vue拓展了静态方法；
+  ```typescript
+    import Vue from './instance/index'
+    import { initGlobalAPI } from './global-api/index'
+    initGlobalAPI(Vue) // 实现了如：Vue.nextTick = nextTick等；
+    // ...
+    export default Vue
+  ```
+
+  Vue入口的调用关系：
+  
+    `web/entry-runtime-with-compiler.js`(加工Vue，添加解析器compile) 
+
+    -> `web/runtime/index.js`（加工Vue，添加全局静态配置；原型上添加$mount、_patch_) 
+
+    -> `core/index.js`（加工Vue，添加全局静态方法） 
+
+    -> `core/instance/index.js`（暴露出Vue构造函数，在执行多个Mixin，给Vue原型添加方法）
+
+  那么vue中为什么有的定义为静态方法，有的挂载到原型上呢？
+  ```typescript
+    1、直接挂到 Vue 的静态方法，通常是全局API，如 Vue.use 注册全局插件、Vue.component 注册全局组件，这些API与实例无关；
+    2、挂载到 Vue.prototype 的方法，是和组件实例相关的；
+    3、$ 开头的，一般是Vue实例提供的属性/函数，与用户定义的属性/函数区分开。
+  ```
+
+
+  ### Part2、数据驱动
+  > 第二章开始，我们将分析Vue的数据驱动思想。所谓数据驱动，是指视图由数据的驱动所生成。
+
+  我们修改视图的方式是通过修改数据，而不是去操作Dom。这样的代码只需要关心数据的修改，逻辑更加清晰（不用担心影响交互），这样的代码也是利于维护的。
+  我们这一章，主要目的是分析：`数据和模版如何渲染为最终的Dom的`；而数据的修改引起视图的修改，是放在了后面的`深入响应式原理`章节。
+
+  - 1、`new Vue` 发生了什么？
+
+    还是回到 Vue的定义，可见Vue 是一个function实现的类，在 `new Vue` 实例的时候，其实最后会执行其原型上的 `_init` 方法，而这个方法的挂载就实现在下面的 `initMixin(Vue)`;
+
+    ```typescript
+      function Vue (options) {
+        if (process.env.NODE_ENV !== 'production' &&
+          !(this instanceof Vue)
+        ) {
+          warn('Vue is a constructor and should be called with the `new` keyword')
+        }
+        // 初始化 发生了什么？
+        // 配置合并、初始化事件中心、初始化render渲染、初始化data、props、computed、watcher...
+        this._init(options)
+      }
+    ```
+
+    然后进入 `src/core/instance/init.js` 看见_init方法的挂载
+    ```typescript
+      export function initMixin(Vue: Class<Component>) {
+        Vue.prototype._init = function (options?: Object) {
+          const vm: Component = this
+          // ...  -> 此处省略非主线代码
+          // 配置合并
+          if (options && options._isComponent) {
+            initInternalComponent(vm, options)
+          } else {
+            vm.$options = mergeOptions(
+              resolveConstructorOptions(vm.constructor),
+              options || {},
+              vm
+            )
+          }
+          // 初始化 - 生命周期
+          initLifecycle(vm)
+          // 初始化 - 事件中心
+          initEvents(vm)
+          // 初始化 - render渲染
+          initRender(vm)
+          // 进入 beforeCreate 阶段
+          callHook(vm, 'beforeCreate')
+          // 初始化 - data
+          initInjections(vm)
+          initState(vm)
+          initProvide(vm)
+          // 进入 created 阶段
+          callHook(vm, 'created')
+
+          // 初始化的最后，如果检测到有 el 属性，则调用vm.$mount方法把实例挂载到dom上，目的就是：将模版渲染为Dom；
+          if (vm.$options.el) {
+            vm.$mount(vm.$options.el)
+          }
+        }
+      } 
+    ```
+
+  - 可以看到，`new Vue()` 主要进行了初始化：合并配置、初始化生命周期、事件中心、render渲染、injection、data、provide、computed、watcher等；
+  本章节，我们先研究主线任务，即 `模版和数据是怎样渲染成Dom的？` 而上面的初始化过程先跳过。
+
+  - 在初始化的最后，Vue检测如果有 `el` 属性，则调用 `vm.$mount` 将它挂载到页面，挂载的目的也就是为了把模版渲染为最后的Dom，接下来继续分析挂载过程；
+
+  
+
+
+  
+
+
+
   
 
