@@ -371,8 +371,7 @@ const collect = (filePath: string) => {
   // 获取源代码 - 通过babel/core的能力将代码转换为兼容的es5版本 - import 转为 require， export转为exports['default'] = aaa
   let code = readFileSync(filePath).toString()
 
-  // 注意， 这里开始判断是否是css --------------------------------------------------------------
-
+  // 注意， 这里开始判断是否是css -----------------------------------> runloaders
   if (/.css$/.test(code)) {
     // 若是css， 则特殊处理代码，css转JSON字符串再插入到style标签
     code = require('./utils/style-loader.js')(code) // loader代码看下方
@@ -622,48 +621,44 @@ writeFileSync('dist.js', generateCode())
   5、功能完成后调用 webpack 提供的callback回调。
 ```
 
-下面写一个插件，其功能是：生成一个叫做 assets.md 的新文件；文件内容是所有构建生成的文件的列表。
+下面写一个插件，其功能是：生成一个叫做 filelist.md 的新文件；文件内容是记录本次构建的所有依赖文件的列表。
 ```typescript
+  // FileListPlugin - 用于emit阶段输出文件时，额外输出一个记录了本次打包依赖文件的md
   class FileListPlugin {
-    // 默认文件名
-    static defaultOptions = {
-      outputFile: 'assets.md'
+    // 插件定义为一个类， 构造函数里可以获取配置项里的options
+    constructor(options) {
     }
-    constructor(options = {}) {
-      // 合并后的选项暴露给插件方法
-      this.options = { ...defaultOptions, ...options }
-    }
+    // apply方法为webpack读取的入口方法
     apply(compiler) {
-      const pluginName = FileListPlugin.name
-      // 当前webpack模块的实例，可以从compiler中解构获取
-      const { webpack } = compiler
-      // 再解构webpack实例获取Compilation对象，里面装了一些有用的常量
-      const { Compilation } = webpack
-      // RawSource 是一种源码类型，可以用它创建一个文件，然后在写文件的阶段emitAsset，额外地添加一个文件写到output目录
-      const { RawSource } = webpack.sources
+      // 监听webpack 输出文件的emit阶段 (这个阶段可以获取本次打包的编译compilation)
+      compiler.hooks.emit.tapAsync('FileListPlugin', (compilation, callback) => {
+        // create a header string for the generated file
+        var fileList = 'In this build:\n\n'
+        // loop through all compiled assets
+        for (var filename in compilation.assets) {
+          // compilation - 代表本次打包对应的‘编译’， key是模块对应名称
+          // value 是一个存放其源代码的对象 { source: string, size: number }
+          // 构造md 文件， 每隔一行记录一个本次打包的依赖文件
+          fileList += '- ' + filename + '\n';
+        }
 
-      // 监听webpack的thisCompilation阶段, 这个阶段可以获取compilation编译
-      compiler.hooks.thisCompilation.tap(pluginName, (compilation) => {
-        compilation.hooks.processAssets.tap({
-          name: pluginName,
-          // 用较靠后的资源处理阶段，保证当前processAssets阶段所有资源被添加到 compilation
-          stage: Compilation.PROCESS_ASSETS_STAGE_SUMMARIZE 
-        }, (assets) => {
-          // assets 是包含了当前编译中的所有资源的对象，key是资源路径 - value是源码
-          // 下面需要遍历所有资源，获取回车分割的文件路径列表的md文件源代码，然后经过RawSource封装一起emitAsset写到文件中
-          const content = '# In this build: \n\n' +
-            Object.keys(assets).map((filename) => `- ${filename}`).join('\n')
-
-          compilation.emitAsset(
-            this.options.outputFile,
-            new RawSource(content)
-          )  
-        })
+        // Insert the list into the webpack build as a new file asset
+        // 额外输出一个 filelist.md 文件
+        compilation.assets['filelist.md'] = {
+          source: function() { // 不用箭头函数， 为了让webpack的this读取到正确的函数作用域
+            return fileList
+          },
+          size: function() {
+            return fileList.length
+          }
+        }
+        // plugin 最后执行回调通知weboack
+        callback()
       })
     }
   }
 
-  module.exports = { FileListPlugin }
+  module.exports = FileListPlugin
 ```
 
 
