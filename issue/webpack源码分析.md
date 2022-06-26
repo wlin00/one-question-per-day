@@ -491,7 +491,46 @@ writeFileSync('dist.js', generateCode())
   module.exports = transform
 ```
 
-写完这个loader，我们需要记住关于loader的一些事
+再写一个符合webpack格式的简单loader，用于replace文件中的特定字符
+```ts
+  // loader：replaceAsync.ts
+  // 异步替换依赖文件中的‘hello’为‘async’
+  module.exports = function (source) {
+    const options = this.getOptions() // 可获取webpack选项
+    const callback = this.async() // 从 webpack - this获取async方法，用于异步场景返回数据给webpack
+
+    setTimeout(() => {
+      const res = source.replace('hello', 'async')
+      callback(null, res)
+    }, 500)
+  }
+
+  // 用法 - 在webpack.config.js中引入，在校验js的时候先run当前loader
+  rules: [
+    {
+      test: /\.[tj]sx?$/,
+      exclude: /node_modules/,
+      use: [
+        'thread-loader,
+        {
+          loader: 'babel-loader',
+          options: {
+            presets: [
+              ['@babel/preset-env'],
+              ['@babel/preset-react', { runtime: 'classic' }],
+              ['@babel/preset-typescript'],
+            ]
+          },
+          { // 先使用自定义loader解析js文件
+            loader: path.resolve(__dirname, './src/loaders/replaceAsync.ts')
+          }
+        }
+      ]
+    }
+  ]
+```
+
+写完loader，我们需要记住关于loader的一些事
 ```javaScript
   1、单一职责原则，可见上面我们的loader做了两件事，转css为js 以及 插入代码到style标签 这其实不符合单一职责原则。
   2、一个功能可能是由多个loader同时协同处理 ，例如sass-loader把scss文件转换为css；再由cssloader转css为js；再由style-loader创建style标签；
