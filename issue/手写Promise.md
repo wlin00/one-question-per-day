@@ -19,7 +19,7 @@ new Promise(function(resolve){
 })
 ```
 
-上面的例子，看起来会感觉回调函数方法更加简洁，但当回调嵌套过多，会看到如下变化
+上面的例子，看起来会感觉回调函数方法更加简洁，但当回调嵌套过多，会看到如下变化（外层回调可能依赖内层回调函数的返回值）
 ```javascript
 // 回调函数
 http.get('url1', function (param1) {
@@ -52,7 +52,7 @@ getUserId('some_url').then(function (id) {
     return getNameById(id); // getNameById 是和 getUserId 一样的Promise封装。下同
 }).then(function (name) {
     //do something
-    return getCourseByName(name);
+    return getCourseByName(name); // return a new promise to realize chain call
 }).then(function (course) {
     //do something
     return getCourseDetailByCourse(course);
@@ -141,6 +141,8 @@ new selfPromise((resolve) => {
   resolve('done')
 }).then((res) => {
   console.log('res', res)
+}).then((res2) => {
+  console.log('res2', res)
 })
 
 // 输出'done'
