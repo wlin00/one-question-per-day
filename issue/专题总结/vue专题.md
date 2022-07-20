@@ -1,4 +1,4 @@
-**一、Vue2 和 Vue3 的区别**：
+**题目1、Vue2 和 Vue3 的区别**：
 > 双向绑定
 - Vue2 现有限制：
 ```typescript
@@ -50,3 +50,30 @@
   1、Vue3 将所有的模块统一放在一个主干分支，一个package.json下有多个文件夹
   2、Vue3中将各个功能抽离成一个个单独的模块，进行独立的打包，又能相互引用
 ``` 
+
+
+
+**题目2 为什么react的hook不能在条件、循环语句中使用，而基于Hook理念的组合式api却可以**：
+```typescript
+  1、react追求纯函数理念, useState等hooks本质上是声明语句，为了声明和调用的一致性，不可避免地要强调顺序。而条件和循环会破坏这种顺序一致性。react hook是在fiber节点上存储hooks链表，每执行一次useState，返回相对应的节点数据，这时链表节点就会后移动一位，这意味着在循环/条件语句中调用，可能执行就会有调用次数少于链表节点移动次数，造成获取错误的fiber节点。
+
+  2、vue3为什么没有这样的限制呢？
+  export const TestVue3 = defineComponnt ({
+    props: ...,
+    setup: () => {
+      let a
+      if (window.name === 'test') {
+        a = ref(0)
+      }
+      const b = ref(0)
+      return () => (
+        <div>
+          {a && a.value} // 若使用条件语句 判断a是否为undefined
+          {b.value}
+        </div>
+      )
+    }
+  })
+
+  这是因为vue3的setup不是一个常规函数，而是一个含有闭包（闭包 = 自由变量 + 函数）的函数，即当改变ref.value触发重渲染的时候，不会重新执行setup函数，而是由 a变量、b变量、return的函数组成了一个闭包作用域，内部的变量可以被持续访问。才不会有react中找不到对应变量的问题，也是因为react把每次render中的useState的顺序 0、1、2、3 的值当作了key。
+```

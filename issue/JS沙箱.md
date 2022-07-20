@@ -12,7 +12,7 @@
 ```
   1、核心是使用proxy对象创建window代理，并将需要被隔离起来的代码执行作用域绑定到proxy对象上
   2、属性active用来在外界控制沙箱是否运行
-  3、new set() injectedKeys 用于记录添加的属性，在沙箱停止的时候删除
+  3、new Set() injectedKeys 用于记录添加的属性，在沙箱停止的时候删除
   4、使用Reflect 高级地实现属性操作
   5、with 和 call 把window的执行绑定到proxyWindow上
 ```

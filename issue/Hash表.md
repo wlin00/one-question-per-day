@@ -206,3 +206,22 @@ function canConstruct(ransomNote: string, magazine: string): boolean {
 };
 ```
 
+
+**题目7，数组交集**：
+给定两个数组 nums1 和 nums2 ，返回 它们的交集 。输出结果中的每个元素一定是 唯一 的。我们可以 不考虑输出结果的顺序 。
+
+```typescript
+function intersection(nums1: number[], nums2: number[]): number[] {
+  // 思路：用set1先处理第一个数组入set
+  // 然后遍历数组2， 来将存在set1的值加入结果set，最后返回结果set的数组化
+  const set1: Set<number> = new Set(nums1)
+  const setRes: Set<number> = new Set()
+  for (const s of nums2) {
+    if (set1.has(s)) {
+      setRes.add(s)
+    }
+  }
+  return Array.from(setRes)
+};
+```
+
