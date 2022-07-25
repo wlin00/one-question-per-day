@@ -77,3 +77,129 @@
 
   这是因为vue3的setup不是一个常规函数，而是一个含有闭包（闭包 = 自由变量 + 函数）的函数，即当改变ref.value触发重渲染的时候，不会重新执行setup函数，而是由 a变量、b变量、return的函数组成了一个闭包作用域，内部的变量可以被持续访问。才不会有react中找不到对应变量的问题，也是因为react把每次render中的useState的顺序 0、1、2、3 的值当作了key。
 ```
+
+
+**题目3 第一次进入被keep-alive缓存的组件，会执行那些生命周期？第2次和第n次呢？**：
+首先说下 `Vue的生命周期` 系统自带：beforeCreate、created、beforeMount、mounted、beforeUpdate、updated、beforeDestroy、destroyed
+然后如果是加入了keep-alive会多两个生命周期：activated、deactivated
+```typescript
+  1、第一次进入被keep-alive缓存的组件，执行：
+    beforeCreate、created、beforeMount、mounted、activated
+    （离开路由，缓存组件失活的时候，执行deactivated）
+  2、后续进入keepalive的组件，执行：
+    activated
+    （离开路由，缓存组件失活的时候，执行deactivated）
+```
+
+**题目4 哪些生命周期开始可以访问this.$el和this.$data？**：
+```typescript
+  1、this.$el: 在mounted阶段挂载页面后，可以访问到this.$el
+  2、this.$data: 在created阶段，执行了initMixin -> initState -> 完成对data的初始化和数据挟持后，可以拿到this.$data
+```
+
+**题目5 描述一下Vue初始化的过程，模版和数据是怎样渲染为视图的？**：
+  - `new Vue()` 主要进行了初始化：合并配置、初始化生命周期、事件中心、render渲染、injection、data、provide、computed、watcher等；
+  本章节，我们先研究主线任务，即 `模版和数据是怎样渲染成Dom的？` 而上面的初始化过程先跳过。
+  - 在初始化的最后，Vue检测如果有 `el` 属性，则调用 `vm.$mount` 将它挂载到页面，挂载的目的也就是为了把模版渲染为最后的Dom，接下来继续分析挂载过程；
+```typescript
+  1、初始化生命周期，是在Vue的构造函数内执行了 initLifeCycle，然后按顺序调用了$options 中的8个生命周期（如果有keep-alive则是10个）
+  2、初始化事件中心，在Vue构造函数内执行了 initEvents，然后根据模版上的属性如@click去找到对应$options里的methods，去为对应的Dom节点添加addEventListener
+  3、初始化data，主要是进行了props、methods、data的初始化，其中对于data初始化细节如下：
+    1）取出当前选项$options中的data，typeof 判断其数据类型，如果是函数则调用函数，取它的返回值；如果是对象则直接返回；
+    2）在this._data上存储当前data对象
+    3)对data对象进行递归的数据挟持，为内部所有类型的属性(数组、对象， 都添加getter和setter，实现方法是调用observe方法创建Observer的实例，内部对数据进行递归的挟持（Object.defineProperty)处理。
+      对data内部属性做递归数据挟持的细节实现：
+        如果是数组：
+          一、Observer类的构造函数中，Array.isArray判断了当前data类型，如果是数组，则用forEach 处理数组然后对内部元素调用observe方法;
+          二、并且将这个数组data的__proto__指向我们自定义的一个数组原型对象完成原型链的继承；这个自定义的数组对象则是Object.create(普通数组原型)的一个纯净副本，我们在这个自定义对象上做了特殊处理，重写了数组7大方法；
+          特别是push、unshift、splice在新增数组元素的时候，我们将新增的数组也截取下来调用vm的对数组的挟持方法来为新增的属性添加 getter 和 setter。
+        如果是对象：
+          我们Object.keys遍历对象，来挟持对象内部属性，然后如果是set方法，执行完后，需要对新的值再次递归observe做递归数据挟持
+    4)Object.keys遍历data的属性，使用Object.defineProperty(vm, key, { ... })对data中的属性进行代理，将他们代理到this._data对象上；这样我们就能通过this.xxx 访问 this._data.xxx
+    5）模版解析，在mounted 阶段前，我们调用compile方法来解析当前模版，进行初始化视图渲染，细节如下：
+      若当前选项传入了el, 则我们通过document.querySelect(this.$options.el) 来获取到目标挂载的Dom节点，然后我们判断节点类型：
+        一、如果nodeType === 3 则是文本节点，我们写一个正则: reg = /\{\{(.*?)\}\}/ 来匹配括号内的内容，然后去对应data中找到这个key，替换给当前文本节点的textContent即可，如下：
+          el.childNodes.forEach((item, index) => {
+            if (item.nodeType === 3) {
+              const reg = /\{\{(.*?)\}\}/ // 匹配括号内的内容，对内容的匹配是一个分组，.*?代表匹配除换行符外的任意字符
+              const text = item.textContent.replace(reg, (match, key) => {  // replace的回调参数1:整个字符串；参数2:正则匹配后的字符串
+                key = key.trim() // 对括号内的内容去除多余空格，获取对应data内的key
+                return this.$data[key]
+              })
+              item.textContent = text
+            }
+          })
+          
+        二、如果nodeType === 1 则是元素节点，我们判断这个元素节点childNodes.length > 0 就递归compile函数解析它，直到解析为文本节点重复上述处理流程;同时这里可以添加事件监听，如下：
+          el.childNodes.forEach((item, index) => {
+            if (item.nodeType === 1) {
+              // 添加事件监听
+              // 若当前解析到元素节点， 需检测节点属性是否含有 @click、@mouseenter等，如果有则添加事件监听
+              if (item.hasAttribute('@click')) {
+                const methodKey = item.getAttribute('@click')
+                item.addEventListener('click', this.$options.methods[methodKey].bind(this))
+              }
+              // 如果是元素节点 & 且不是空节点，则递归调用compile方法
+              item.childNodes.length > 0 && this.compile(item)   
+            }
+          })
+```
+
+**题目6 Vue2中，数据修改，如何驱动视图修改？**：
+```typescript
+  1、Vue2的响应式原理：发布订阅模式 + 数据挟持
+  2、初始化的过程中，我们在Vue构造函数中新建一个map的数据结构用于存储 某个属性被哪些视图watcher所引用（作为了发布订阅模式的第三方）
+    this.$watchEvent = {}
+  3、我们知道每个组件会对应一个watcher实例，所以我们需要一个Watcher类，在编译文本节点的时候为每个组件新建watcher；以便于后续数据变化可以结合全局watcher-map去通知依赖这个属性的每个watcher来更新视图
+    class Watcher {
+      constructor(node, attr, vm, key) {
+        this.node = node
+        this.attr = attr
+        this.vm = vm
+        this.key = key
+      }
+      update() {
+        this.node[this.attr] = this.vm[this.key] // 用vm中新的属性值去更新视图
+      }
+    }
+  4、在编译模版的文本节点时，我们记录那些使用了data中数据的节点，去存储它们的watcher; 即在全局watcher-map中以 《属性 -> 组件watcher实例数组》 的键值对的形式存储：
+    代码如下：
+    if (item.nodeType === 3) {
+      // 如果是文本节点， 正则匹配括号内的内容，当作key去data中寻找，如果有的话，则替换data[key]
+        const reg = /\{\{(.*?)\}\}/ // 匹配括号内的内容，对内容的匹配是一个分组，.*?代表匹配除换行符外的任意字符
+        const text = item.textContent.replace(reg, (match, key) => { // replace的回调参数1:整个字符串；参数2:正则匹配后的字符串
+          key = key.trim() // 对括号内的内容去除多余空格，获取对应data内的key
+          // 在初始化用属性去渲染文本节点时，首先给每个组件实例绑定一个watcher，我们记录当前属性被哪些watcher所依赖
+          let watcher = new Watcher(item, 'textContent', this, key)
+          if (this.hasOwnProperty(key)) { // 若当前属性合法， 则记录属性被当前watcher所依赖
+            if (this.$watchEvent[key]) {
+              this.$watchEvent[key].push(watcher)  // 用于数据修改后，setter可以取出全局wacher-map中的对应属性的watcher数组，去通知每个watcher更新视图
+            } else { // 若当前全局wacher-map没有当前属性，则初始化map的对应值为一个数组
+              this.$watchEvent[key] = []
+              this.$watchEvent[key].push(watcher)
+            }
+          }
+          return this.$data[key]
+        })
+        // 将替换后的文本，修改给文本节点的textContent
+        item.textContent = text
+      }
+  5、当observe中挟持到的数据发生变化，即set方法执行时，我们去判断这个属性是否有订阅者，如果则通知依赖这个属性的每个watcher去调用update方法更新组件视图
+    observe的set中：
+    set(newValue){
+      if (newValue === value) {
+        return
+      }
+      observe(target, newValue) // 递归数据挟持
+      value = newValue // 状态更新
+
+      // 视图更新, 若当前属性有订阅者，则让订阅的watcher们执行update
+      if (this.$watchEvent[key]) {
+        this.$watchEvent[key].forEach((item, index) => {
+          item.update()
+        })
+      }
+    }
+  通过上述操作，可实现vue2的响应式
+```
+
