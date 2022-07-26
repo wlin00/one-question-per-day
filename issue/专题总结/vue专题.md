@@ -97,7 +97,23 @@
   2、this.$data: 在created阶段，执行了initMixin -> initState -> 完成对data的初始化和数据挟持后，可以拿到this.$data
 ```
 
-**题目5 描述一下Vue初始化的过程，模版和数据是怎样渲染为视图的？**：
+**题目5 Vuex是在哪个生命周期注入vue的？**：
+```typescript
+  1、我们在安装Vuex的时候，是通过Vue.use()来载入
+    import Vuex from 'vuex'
+    Vue.use(Vuex)
+  2、Vue.use则是执行了插件的install方法，在Vue的initGlobalAPI里则有一个initUse方法来安装插件
+    那么Vue.use是做了什么呢？
+    Vue.use就是去判断传入的入参即插件是否存在，是的话直接返回；
+    如果不存在则检测传入的plugin是否具备install方法，如果有的话，就执行插件的install：plugin.install.apply(plugin, args)
+  3、看Vuex的源码，向外暴露了供Vue.use使用的install方法，它内部执行了Vue.mixin({ beforeCreate: vuexInit })
+    所以可以知道，在Vuex的源码里，调用了Vue.minin来将vuexinit混入到beforeCreate这个生命周期钩子，那么后续每个vm实例都会在beforeCreate的阶段初始化Vuex
+  4、vuexInit做了什么呢？
+    1）如果判断当前选项$options里有store，则将store赋给this.$sotre, 说明是根节点。即this.$store = this.options.store
+    2) 如果当前选项没有store，则不是跟节点，那么去父节点找这个stroe，即this.$store = this.$options.parent.$store
+```
+
+**题目6 描述一下Vue初始化的过程，模版和数据是怎样渲染为视图的？**：
   - `new Vue()` 主要进行了初始化：合并配置、初始化生命周期、事件中心、render渲染、injection、data、provide、computed、watcher等；
   本章节，我们先研究主线任务，即 `模版和数据是怎样渲染成Dom的？` 而上面的初始化过程先跳过。
   - 在初始化的最后，Vue检测如果有 `el` 属性，则调用 `vm.$mount` 将它挂载到页面，挂载的目的也就是为了把模版渲染为最后的Dom，接下来继续分析挂载过程；
@@ -107,7 +123,7 @@
   3、初始化data，主要是进行了props、methods、data的初始化，其中对于data初始化细节如下：
     1）取出当前选项$options中的data，typeof 判断其数据类型，如果是函数则调用函数，取它的返回值；如果是对象则直接返回；
     2）在this._data上存储当前data对象
-    3)对data对象进行递归的数据挟持，为内部所有类型的属性(数组、对象， 都添加getter和setter，实现方法是调用observe方法创建Observer的实例，内部对数据进行递归的挟持（Object.defineProperty)处理。
+    3) 对data对象进行递归的数据挟持，为内部所有类型的属性(数组、对象， 都添加getter和setter，实现方法是调用observe方法创建Observer的实例，内部对数据进行递归的挟持（Object.defineProperty)处理。
       对data内部属性做递归数据挟持的细节实现：
         如果是数组：
           一、Observer类的构造函数中，Array.isArray判断了当前data类型，如果是数组，则用forEach 处理数组然后对内部元素调用observe方法;
@@ -145,7 +161,7 @@
           })
 ```
 
-**题目6 Vue2中，数据修改，如何驱动视图修改？**：
+**题目7 Vue2中，数据修改，如何驱动视图修改？**：
 ```typescript
   1、Vue2的响应式原理：发布订阅模式 + 数据挟持
   2、初始化的过程中，我们在Vue构造函数中新建一个map的数据结构用于存储 某个属性被哪些视图watcher所引用（作为了发布订阅模式的第三方）
@@ -203,3 +219,33 @@
   通过上述操作，可实现vue2的响应式
 ```
 
+**题目7 Vue中的diff算法，初版**：
+```typescript
+  vue2中：
+  1、比较两个vnode节点是否相等：
+    1）比较两vnode的key
+    2）比较两vnode的tag
+    3）是否都定义了data，data包含的一些信息是否相等
+    4）是否是input标签，是的话比较type
+  若节点不等 ，则直接替换旧的节点oldVnode
+
+  2、若两个vnode比对相等，进入patchVnode方法，来暴力比对两个节点的更多信息
+    1）patchVnode过程主要根据根据节点类型判断来比对，如是否是文本节点（是的话更新textContent即可）
+    2）核心：如果非文本节点且都有子节点，那么对两个vnode的子节点进行updateChildren方法
+
+  3、updateChildren，用于多叉树的比对：
+    1）oldStart 和 newStart 比对（头头），若相等下标++
+    2）oldEnd 和 newEnd 比对（尾尾），若相等则下标--
+    3）oldStart 和 newEnd 比对（头尾），若相等指针中间靠拢，且真实dom的第一个节点移动到最后
+    2）oldEnd 和 newStart 比对（尾头），若相等指针中间靠拢，且真实dom的最后一个节点移动到最前
+    5）若两个vnode有key：旧节点根据key生成hash-table，然后用newStart去一一匹配，指针继续中间靠拢，匹配成功将匹配的节点移动到真实dom的最前面
+       若两个vnode无key：则直接将新节点头节点插入真实dom
+
+  // vue的diff过程中，一个列表根据key对数组/列表进行重用的时候，使用的算法是《编辑距离》，表示如何用最小的修改次数将一个节点修改成新节点
+    1)若两个vnode树末尾节点相等，则比对他们的前一位dp[i - 1][j - 1]
+    2)若两个vnode树末尾节点不等，则取三种策略（新增、删除、替换）的最小值+1 ， dp[i][j] = Math.min(dp[i][j - 1], dp[i - 1][j], dp[i - 1][j - 1]) + 1
+  
+
+  vue3中：      
+  vue3对于无脑的patchVnode做了优化，它在编译时会给节点添加静态节点（纯html元素）的类型，在后续patchNode的时候，如果是静态节点则跳过更新
+```
