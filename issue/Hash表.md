@@ -35,10 +35,25 @@ function isAnagram(s: string, t: string): boolean {
     hash[s[i].charCodeAt(0) - baseASCII]++ // 第一个字符用于入hash
     hash[t[i].charCodeAt(0) - baseASCII]-- // 第一个字符用于抵消已有hash
   }
-
   return hash.every((item:number) => item === 0) // 只要最后hash数组每一项都被抵消，则为异位字符
 };
+```
 
+
+**题目1-2，字母异位词分组**：
+给你一个字符串数组，请你将 字母异位词 组合在一起。可以按任意顺序返回结果列表。
+字母异位词 是由重新排列源单词的字母得到的一个新单词，所有源单词中的字母通常恰好只用一次。
+
+**代码：**
+```typescript
+function groupAnagrams(strs: string[]): string[][] {
+  let map = new Map()
+  for (let i = 0; i < strs.length; i++) {
+    const sortKey = strs[i].split('').sort().join('') // ['b', 'a', 'e'].sort() 按ASCII码排序为统一的key
+    map.get(sortKey) ? map.get(sortKey).push(strs[i]) : map.set(sortKey, [strs[i]])
+  }
+  return [...map.values()]
+};
 ```
 
 **题目2，快乐数**：
