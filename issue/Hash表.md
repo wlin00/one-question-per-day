@@ -240,3 +240,51 @@ function intersection(nums1: number[], nums2: number[]): number[] {
 };
 ```
 
+
+**题目8，找到字符串中所有字母异位词**：
+给定两个字符串 s 和 p，找到 s 中所有 p 的 异位词 的子串，返回这些子串的起始索引。不考虑答案输出的顺序。
+示例
+```typescript
+  输入: s = "cbaebabacd", p = "abc"
+  输出: [0,6]
+  解释:
+  起始索引等于 0 的子串是 "cba", 它是 "abc" 的异位词。
+  起始索引等于 6 的子串是 "bac", 它是 "abc" 的异位词。
+```
+```typescript
+  function findAnagrams(s: string, p: string): number[] {
+    // 思路，两个字符串转数组的hash table
+
+    const res = [], base = 'a'.charCodeAt(0)
+    const [n, m] = [s.length, p.length]
+    const arr1 = new Array(26).fill(0)
+    const arr2 = new Array(26).fill(0)
+
+    if (n < m) {
+      return res
+    }
+
+    // 先收集第一个子串的长度下标入两个hash table
+    for (let i = 0; i < m; i++) {
+      arr1[s[i].charCodeAt(0) - base]++
+      arr2[p[i].charCodeAt(0) - base]++
+    }
+
+    if (arr1.toString() === arr2.toString()) { // 收集第一项
+        res.push(0)
+    }
+
+    // 处理后续下标长度，处理第一个hash table，处理方式是：每次去除第一位旧的字符，然后加入新的字符入hash
+    for (let i = m; i < n; i++) {
+      arr1[s[i - m].charCodeAt(0) - base]--
+      arr1[s[i].charCodeAt(0) - base]++
+
+      if (arr1.toString() === arr2.toString()) {
+        res.push(i - m + 1) // 收集可行的开始下标
+      }
+    }
+
+    return res
+  };
+```
+

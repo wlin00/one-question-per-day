@@ -145,7 +145,7 @@ type TupleToObject = any
 **代码：**
 ```typescript
 type TupleToObject<T extends readonly (symbol | number | string)[]> = { // 让T约束在可输入symbol、number、string的只读（readonly）的元组类型下
-  [P in T[number]]: T // P in T[number] 可以遍历元组
+  [P in T[number]]: P // P in T[number] 可以遍历元组
 }
 ```
 
