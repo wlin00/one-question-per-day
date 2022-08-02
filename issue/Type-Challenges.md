@@ -149,6 +149,7 @@ type TupleToObject<T extends readonly (symbol | number | string)[]> = { // 让T�
 }
 ```
 
+
 **题目5，第一个元素**：
 实现一个通用First<T>，它接受一个数组T并返回它的第一个元素的类型。
 本题记录它的四种解法
@@ -176,4 +177,65 @@ type First<T extends any[]> = T[0] extends T[number] ? T[0] : never
 // 解法4：使用infer模拟元组的解构操作
 type First<T extends any[]> = T extends [infer first, ...infer rest] ? first : never
 
+```
+
+
+**题目6，获取元组长度**：
+创建一个通用的`Length`，接受一个`readonly`的数组，返回这个数组的长度
+ 
+示例：
+```typescript
+  type tesla = ['tesla', 'model 3', 'model X', 'model Y']
+  type spaceX = ['FALCON 9', 'FALCON HEAVY', 'DRAGON', 'STARSHIP', 'HUMAN SPACEFLIGHT']
+  type teslaLength = Length<tesla> // expected 4
+  type spaceXLength = Length<spaceX> // expected 5
+  // 请写出 TupleToObject 的实现
+  type Length<T> = any
+```
+
+**代码：**
+```typescript
+  type Length<T extends readonly any[]> = T['length']
+```
+
+
+**题目7，Exclude**：
+  实现内置的Exclude <T, U>类型，但不能直接使用它本身。
+  > 从联合类型T中排除U的类型成员，来构造一个新的类型。
+ 
+示例：
+```typescript
+  type Result = MyExclude<'a' | 'b' | 'c', 'a'> // 'b' | 'c'
+  // 请写出 Exclude 的实现
+  type MyExclude<T, U> = any
+```
+
+**代码：**
+```typescript
+  // union1 extends union2 -> 代表两层遍历union；
+  // 三元表达式的 ？ 则表示在union2遍历到了union1中存在的映射（即成功匹配），则本题中剔除 返回never；
+  // 否则return 不存在于union1中的元素
+  // 即 Union1 extends Union2 时，它的行为是循环遍历匹配；若匹配上，则返回匹配上的Union类型
+  type MyExclude<T, U> = T extends U ? never : T 
+```
+
+
+**题目8，Awaited**：
+
+ 
+示例：
+```typescript
+  type ExampleType = Promise<string>
+  type Result = MyAwaited<ExampleType> // 希望输出：string
+  // 请写出 Awaited 的实现
+  type MyAwaited<T> = any
+```
+
+**代码：**
+```typescript
+  type MyAwaited<T extends Promise<unknown>> = T extends Promise<infer X> 
+    ? X extends Promise<unknown> // 判断内部参数是否promise
+      ? MyAwaited<X>
+      : X
+    : T // 入参不是promise 直接返回
 ```
