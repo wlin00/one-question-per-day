@@ -221,8 +221,6 @@ type First<T extends any[]> = T extends [infer first, ...infer rest] ? first : n
 
 
 **题目8，Awaited**：
-
- 
 示例：
 ```typescript
   type ExampleType = Promise<string>
@@ -238,4 +236,35 @@ type First<T extends any[]> = T extends [infer first, ...infer rest] ? first : n
       ? MyAwaited<X>
       : X
     : T // 入参不是promise 直接返回
+```
+
+
+**题目9，If**：
+实现一个 `IF` 类型，它接收条件类型 `C` ，一个判断为真时的返回类型 `T` ，以及判断为假时的返回类型 `F`。 C 只能是 true 或者 false， T 和 F 可是任意类型。
+示例：
+```typescript
+  type A = If<true, 'a', 'b'>  // expected to be 'a'
+  type B = If<false, 'a', 'b'> // expected to be 'b'
+  // 请写出 If 的实现
+  type If<C, T, F> = any
+```
+
+**代码：**
+```typescript
+  type If<C extends (true | false), T, F> = C extends true ? T : F
+```
+
+
+**题目10，Concat**：
+在类型系统里实现 JavaScript 内置的 `Array.concat` 方法，这个类型接受两个参数，返回的新数组类型应该按照输入参数从左到右的顺序合并为一个新的数组。
+示例：
+```typescript
+  type Result = Concat<[1], [2]> // expected to be [1, 2]
+  // 请写出 Concat 的实现
+  type Concat<T, U> = any
+```
+
+**代码：**
+```typescript
+  type Concat<T extends any[], U extends any[]> = [...T, ...U]
 ```
