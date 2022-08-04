@@ -268,3 +268,37 @@ type First<T extends any[]> = T extends [infer first, ...infer rest] ? first : n
 ```typescript
   type Concat<T extends any[], U extends any[]> = [...T, ...U]
 ```
+
+
+**题目11，Includes**：
+在类型系统里实现 JavaScript 的 `Array.includes` 方法，这个类型接受两个参数，返回的类型要么是 `true` 要么是 `false`。
+示例：
+```typescript
+  type isPillarMen = Includes<['Kars', 'Esidisi', 'Wamuu', 'Santana'], 'Dio'> // expected to be `false`
+  import type { Equal } from '@type-challenges/utils' // 本题用Equal来判断两个类型变量相等
+  // 请写出 Includes 的实现
+  type Includes<T extends readonly any[], U> = any
+```
+
+**代码：**
+```typescript
+  // 思路：采用递归思想 - 若当前First Item 解构出来等于U，则返回true；否则递归Rest；若最后无法解构出First，则递归结束
+  type Includes<T extends readonly any[], U> = T extends [infer First, ...infer Rest] 
+    ? (Equal<First, U> extends true ? true : Includes<Rest, U>)
+    : false
+```
+
+
+**题目12，Push/Unshift**：
+在类型系统里实现通用的 ```Array.push``` & ```Array.unshift``` 。
+示例：
+```typescript
+  type Push<T, U> = any
+  type Unshift<T, U> = any
+```
+
+**代码：**
+```typescript
+  type Push<T extends any[], U> = [...T, U]
+  type Unshift<T extends any[], U> = [U, ...T]
+```
