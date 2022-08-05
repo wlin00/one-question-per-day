@@ -302,3 +302,21 @@ type First<T extends any[]> = T extends [infer first, ...infer rest] ? first : n
   type Push<T extends any[], U> = [...T, U]
   type Unshift<T extends any[], U> = [U, ...T]
 ```
+
+
+**题目13，Parameters获取函数内部的参数元组**：
+实现内置的 Parameters<T> 类型，而不是直接使用它，可参考[TypeScript官方文档](https://www.typescriptlang.org/docs/handbook/utility-types.html#parameterstype)。 
+示例：
+```typescript
+  const foo = (arg1: string, arg2: number): void => {}
+  type FunctionParamsType = MyParameters<typeof foo> // [arg1: string, arg2: number]
+  // 请写出 Parameters 的实现
+  type Parameters<T extends (...args: any[]) => any> = any
+```
+
+**代码：**
+```typescript
+  // 能取到函数的参数就返回，否则返回never
+  type Parameters<T extends (...args: any[]) => any> = T extends (...args: infer X) => any ? X : never
+
+```
