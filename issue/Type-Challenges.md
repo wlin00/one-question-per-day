@@ -318,5 +318,39 @@ type First<T extends any[]> = T extends [infer first, ...infer rest] ? first : n
 ```typescript
   // 能取到函数的参数就返回，否则返回never
   type Parameters<T extends (...args: any[]) => any> = T extends (...args: infer X) => any ? X : never
+```
 
+
+**题目14，不使用 `ReturnType` 实现 TypeScript 的 `ReturnType<T>` 泛型**：
+示例：
+```typescript
+ const fn = (v: boolean) => {
+    if (v)
+      return 1
+    else
+      return 2
+  }
+  type a = MyReturnType<typeof fn> // 应推导出 "1 | 2"
+```
+**代码：**
+```typescript
+  // 判断当前T 是否是函数且有返回值， 是的话返回这个返回值 ，否则返回T本身
+  type MyReturnType<T> = T extends (...arg: any) => (infer X) ? X : T
+```
+
+
+**题目15，不使用 `Omit` 实现 TypeScript 的 `Omit<T, K>` 泛型。**：
+`Omit` 会创建一个省略 `K` 中字段的 `T` 对象。
+示例：
+```typescript
+  // 实现 MyOmit 实际上是取 Pick 的剩余部分
+  type MyOmit<T, K> = any
+```
+**代码：**
+```typescript
+  // Omit是剔除那些K中的、存在于T中的属性，而非选择，所以我们只需要实现 Exclude + Pick
+  type myExclude<T, U> = T extends U ? never : T // T, U 都是union，目的是在T中剔除U
+  type MyOmit<T, K extends keyof T> = {
+    [P in myExclude<keyof T, K>]: T[P]
+  }
 ```
