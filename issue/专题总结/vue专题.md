@@ -249,3 +249,29 @@
   vue3中：      
   vue3对于无脑的patchVnode做了优化，它在编译时会给节点添加静态节点（纯html元素）的类型，在后续patchNode的时候，如果是静态节点则跳过更新
 ```
+
+**题目8**
+> Vue响应式原理
+**从 `初始化` 到 `更新视图`**
+```typescript
+  一、首先core/instance/index.js 内是vue的真面目，是向外export function Vue() {} 作为构造函数，其内部调用了initMixin里实现的 this._init()方法；
+  二、挂在原型prototype上的 _init() 方法，其实是做了一系列初始化（选项合并、生命周期、事件中心），当进入beforeCreate阶段（created阶段前），执行了 initState(), 这个方法内部获取了当前 vm.$options 然后对 props、methods和data 分别进行了初始化；
+  三、其中 initState() 里对data的初始化就是 initData() 方法，这个方法主要做了如下事情：
+    1、取出 vm.$options.data，判断如果是函数就取其返回值，否则取它本身（因data一般写成一个函数，避免属性重复）
+    2、将当前data存储在 vm._data 上
+    3、调用 observe() 方法来对当前data进行递归的数据挟持
+      -> 处理数组：数组则重写原型上的七大方法，额外的挟持数组新增的属性；
+      -> 处理对象：Object.keys() 遍历每个对象的key来调用 defineReactive() 方法进行数据挟持
+      重点 - defineReactive() 方法详解：
+        (1) 介绍： 
+          这个方法主要是先根据当前key来进行 const dep = new Dep 生成一个dep实例即订阅器；后使用Object.definePropert()来将为当前data内部每个属性做递归的数据挟持，即set的时候会递归 observe(newValue);
+        (2) get & set： 
+          dep可用于后续数据获取，触发 get()方法时，可调用 dep.depend()来收集用到当前属性的watcher数组，将它们加入dep 
+          dep也可用后续数据改变，触发 set()方法时，对新的值做递归observe数据挟持 & 更新值后，可调用 dep.notify()去通知当前dep中的依赖当前key的所有watcher 去调用其 update()方法更新视图；
+        (3) 异步队列：
+          watcher调用 update()更新视图的方式是：执行queueWatcher() 在js同步线程中收集watcher，而在执行的这些watcher的时候包裹了一层nextTick的异步队列，源码中选取异步队列的策略优先级是Promise > mutationObserver > setImmediate > setTimeout(0)；即当异步回调执行的时候，可保证同步任务中的需要更新的watcher已经收集完毕，此时可以调用watcher.run() 调用_update函数进行视图更新；
+        (4) 渲染vnode：  
+          render函数执行后，本质上是想用vnode生成真实dom，若是初始化运行，则patch中直接生成真实dom；否则进行patch和 updateChildren()方法的多叉树比对（即头头、尾尾、头尾、尾尾、比对key),最后完成视图渲染；
+    4、Object.defineProperty 来将this.xxx 代理到 this._data.xxx
+  四、进入$mount时期，若是 Vue Runtime with Compiler 的版本，则会先进行模版编译，即将模版转ast再转为render函数和Vnode；然后会执行new Watcher() 新建和当前视图（Vnode）相绑定的watcher实例；然后调用_update 初始化Vnode的时候，会取用Vnode上面的属性从而触发数据挟持的set，这时就会把watcher推入dep的数组中建立dep和渲染watcher的绑定关系。
+```
