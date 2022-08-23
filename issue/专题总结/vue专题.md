@@ -273,5 +273,5 @@
         (4) 渲染vnode：  
           render函数执行后，本质上是想用vnode生成真实dom，若是初始化运行，则patch中直接生成真实dom；否则进行patch和 updateChildren()方法的多叉树比对（即头头、尾尾、头尾、尾尾、比对key),最后完成视图渲染；
     4、Object.defineProperty 来将this.xxx 代理到 this._data.xxx
-  四、进入$mount时期，若是 Vue Runtime with Compiler 的版本，则会先进行模版编译，即将模版转ast再转为render函数和Vnode；然后会执行new Watcher() 新建和当前视图（Vnode）相绑定的watcher实例；然后调用_update 初始化Vnode的时候，会取用Vnode上面的属性从而触发数据挟持的set，这时就会把watcher推入dep的数组中建立dep和渲染watcher的绑定关系。
+  四、进入$mount时期，若是 Vue Runtime with Compiler 的版本，则会先进行模版编译，即将模版转ast再转为render函数和Vnode；然后会执行new Watcher() 新建和当前视图（Vnode）相绑定的watcher实例；然后调用_update 初始化Vnode的时候，会取用Vnode上面的属性从而触发数据挟持的get，这时就会把watcher推入dep的数组中建立dep和渲染watcher的绑定关系。
 ```
