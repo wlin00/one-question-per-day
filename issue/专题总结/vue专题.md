@@ -275,3 +275,53 @@
     4、Object.defineProperty 来将this.xxx 代理到 this._data.xxx
   四、进入$mount时期，若是 Vue Runtime with Compiler 的版本，则会先进行模版编译，即将模版转ast再转为render函数和Vnode；然后会执行new Watcher() 新建和当前视图（Vnode）相绑定的watcher实例；然后调用_update 初始化Vnode的时候，会取用Vnode上面的属性从而触发数据挟持的get，这时就会把watcher推入dep的数组中建立dep和渲染watcher的绑定关系。
 ```
+
+**题目9**
+> Keep-alive原理
+  简介： `keep-alive` 是一个抽象组件，自身不会渲染为一个Dom元素；使用keep-alive包裹动态组件的时候，会 `缓存` 不活动的组件实例，而不是销毁他们。它在`列表` -> `文章详情`的场景常被用到
+
+  使用：
+  ```html
+    <keep-alive include="/a|b/" exclude="b"> <!-- include代表需要缓存的组件名即白名单，exclude代表不会缓存的黑名单，并且优先级exclude更高 -->
+      <component :is="view" /> <!-- 需要缓存的组件 -->
+    </keep-alive>
+  ```
+
+  原理:Vue3中使用了LRUCache作为keep-alive实现原理
+  ```typescript
+    1、获取keep-alive包裹的第一个子组件对象以及其组件名；
+    2、根据缓存黑白名单进行匹配，决定是否缓存，若不缓存则返回组件实例；若缓存则进行下一步；
+    3、根据组件ID和tag生成缓存key，并在缓存对象中查找是否有这个key
+      若存在：取出key并重新设置key来更新其使用时间（类似LRU）；
+      若没有：在this.cache存储当前组件实例并保存key的值，再检查当前缓存实例个数是否超过最大值，是的话删除最近最久未使用的那个缓存实例（下标为0的key）；
+
+    vue3中的keep-alive是用了LRU算法：
+      class LRUCache {
+        capacity: number
+        map: Map<number, number>
+        constructor(capacity: number) {
+          this.capacity = capacity
+          this.map = new Map()
+        }
+        get(key: number): number {
+          if (map.has(key)) {
+            const value = map.get(key)
+            map.delete(key)
+            map.set(value)
+            return value
+          } else {
+            return -1
+          }
+        }
+        set(key: number, value: number): void {
+          if (map.has(key)) {
+            map.delete(key)
+          }
+          map.set(key, value)
+          if (map.size > this.capacity) {
+            const deleteKey = this.map.keys().next().value
+            this.map.delete(deleteKey)
+          }
+        }
+      }
+  ```
