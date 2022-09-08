@@ -354,3 +354,31 @@ type First<T extends any[]> = T extends [infer first, ...infer rest] ? first : n
     [P in myExclude<keyof T, K>]: T[P]
   }
 ```
+
+
+**题目16，ts定义一个固定长度的数组**：
+示例：
+```typescript
+  // 实现 createTuple 方法，输入一个总数total， 和一个类型T， 返回一个长度为total的全为T类型的数组
+  type createTuple<total, T> = any
+```
+**代码：**
+```typescript
+  type createTuple<total, T, X extends T[] = []> = T['length'] extends total
+    ? X
+    : (createTuple<total, T, [...X, T]>)
+
+  type Length5NumberArr = createTuple<5, number> // [number, number, number, number, number]
+```
+
+
+**题目17，写一个Equal来比对两个类型是否相等**：
+示例：
+```typescript
+  type Equal<T, U> = any
+```
+**代码：**
+```typescript
+  type Equal<T, U, X extends any[] = []> = (X extends T ? 1 : 2) extends (X extends U ? 1 : 2) ? true : false
+
+```
