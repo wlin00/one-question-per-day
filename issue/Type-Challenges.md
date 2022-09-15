@@ -382,3 +382,37 @@ type First<T extends any[]> = T extends [infer first, ...infer rest] ? first : n
   type Equal<T, U, X extends any[] = []> = (X extends T ? 1 : 2) extends (X extends U ? 1 : 2) ? true : false
 
 ```
+
+
+**题目18，实现一个 Pick版本的Readonly**：
+  实现一个通用MyReadonly2<T, K>，它带有两种类型的参数T和K。
+  K指定应设置为Readonly的T的属性集。如果未提供K，则应使所有属性都变为只读，就像普通的Readonly<T>一样。
+示例：
+```typescript
+  interface Todo {
+    title: string
+    description: string
+    completed: boolean
+  }
+  const todo: MyReadonly2<Todo, 'title' | 'description'> = {
+    title: "Hey",
+    description: "foobar",
+    completed: false,
+  }
+  todo.title = "Hello" // Error: cannot reassign a readonly property
+  todo.description = "barFoo" // Error: cannot reassign a readonly property
+  todo.completed = true // OK
+```
+**代码：**
+```typescript
+  // type MyReadonly2<T, K> = any
+  // 思路：将T中的《参数K联合类型》输出为readonly， 然后将只读部分与剩余非只读部分通过‘&’合并
+
+  // 先实现工具方法MyExclude用于获取K在T中的差集 ，用于和只读部分合并
+  type myExclude<T, U> = T extends U ? never : T
+  type MyReadonly2<T, K extends keyof T = keyof T> = {
+    readonly [P in K]: T[P]
+  } & {
+    [P in myExclude<keyof T, K>]: T[P]
+  }
+```
