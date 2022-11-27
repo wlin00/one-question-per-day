@@ -66,7 +66,7 @@
   "Vue Component": {
     "prefix": "vbt", // vue3 + tsx base
     "body": [
-      "import { defineComponent, ref } from 'vue';",
+      "import { defineComponent } from 'vue';",
       "export const $1 = defineComponent({",
       "  setup: (props, context) => {",
       "    return () => (",
@@ -74,6 +74,12 @@
       "    )",
       "  }",
       "})",
+    ]
+  },
+  "Import Module SCSS": {
+    "prefix": "ims",
+    "body": [
+      "import s from './$1.module.scss';",
     ]
   }
 }
