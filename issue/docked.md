@@ -28,3 +28,35 @@
 4、docker info // 查看docker信息，例如在Registry Mirrors中可以看到用于docker加速的阿里云源地址
 5、docker images // 查看已经下载的镜像
 ```
+
+# 4、docker安装
+  1、mac可以通过`Homebrew`来安装Docker
+  2、先安装`Homebrew`，因官网安装`brew`的源在国外，所以需要切换安装的源到国内：
+  ```typescript
+    /bin/zsh -c "$(curl -fsSL https://gitee.com/cunkai/HomebrewCN/raw/master/Homebrew.sh)"
+  ```  
+  3、用`Homebrew`安装`docker`:
+  ```typescript
+    brew install --cask --appdir=/Applications docker
+  ```
+  4、安装完成，用 `docker --version` 查看版本
+  5、进入docker客户端的设置中的：`Docker Engine`选项卡，配置如下加速：
+  ```json
+  {
+    "builder": {
+      "gc": {
+        "enabled": true,
+        "defaultKeepStorage": "20GB"
+      }
+    },
+    "experimental": false,
+    "features": {
+      "buildkit": true
+    },
+    "registry-mirrors":[
+      "http://hub-mirror.c.163.com"
+    ]
+  }
+  ```
+  6、使用docker info验证加速配置
+    
