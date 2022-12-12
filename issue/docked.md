@@ -68,3 +68,46 @@
   ```
   2、这个工作空间就代表了一个`容器内外共享`的目录，即外部的mac系统和内部的linux系统的文件能够得到`同步`
   3、一般需要共享的文件是放在这个`共享工作空间`，常规的非共享操作可以在～/repos等其他目录中进行
+
+**6、使用docker搭建rails+vue3+postgresql的全栈应用：**
+  1、为了统一开发环境和生产环境，我使用docker来作为容器；
+    （1）打开容器前，先在终端执行：docker network create network1，来创建一个独立的网络
+    （2）使用Vscode插件`Dev Container`打开docker镜像
+    （3）该docker镜像自带了以下功能：archlinux、zsh、fzf、rvm + ruby、nvm + node、go、
+      docker in docker、chezmoi、各种国内加速……
+    （4）该环境使用的核心依赖的版本分别是：`nodeJs v18.10.0`, `Rails 7.0.4`,`pnpm 7.12.2`
+
+  2、在docker中，初始化后端项目：
+  ```sh
+    gem sources --add https://gems.ruby-china.com/ --remove https://rubygems.org/
+    bundle config mirror.https://rubygems.org https://gems.ruby-china.com
+    gem install rails -v 7.0.2.3
+    pacman -S postgresql-libs
+    cd ~/repos
+    rails new --api --database=postgresql --skip-test mangosteen-1
+  ```
+  3、在mac环境中，初始化 & 启动 -> 和docker中rails项目相关联的数据库
+  ```sh
+    docker run -d \
+    --name db-for-mangosteen \
+    -e POSTGRES_USER=mangosteen \
+    -e POSTGRES_PASSWORD=123456 \
+    -e POSTGRES_DB=mangosteen_dev \
+    -e PGDATA=/var/lib/postgresql/data/pgdata \
+    -v mangosteen-data:/var/lib/postgresql/data \
+    --network=network1 \
+    postgres:14
+  ```
+  4、在docker中，修改 config中的`database.yml`文件，连接数据库
+  ```yml
+    development:
+    <<: *default
+    database: mangosteen_dev
+    username: mangosteen
+    password: 123456
+    host: db-for-mangosteen
+  ```
+  5、在docker中运行rails应用，该应用会为我们默认启动一个`3000端口`的服务，在外部mac环境可以访问到；至此，初步完成docker的后端环境配置。
+  ```sh
+    bundle exe rails s
+  ```
