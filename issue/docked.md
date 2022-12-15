@@ -86,6 +86,7 @@
     cd ~/repos
     rails new --api --database=postgresql --skip-test mangosteen-1
   ```
+
   3、在mac环境中，初始化 & 启动 -> 和docker中rails项目相关联的数据库
   ```sh
     docker run -d \
@@ -98,6 +99,7 @@
     --network=network1 \
     postgres:14
   ```
+
   4、在docker中，修改 config中的`database.yml`文件，连接数据库
   ```yml
     development:
@@ -107,7 +109,44 @@
     password: 123456
     host: db-for-mangosteen
   ```
+
   5、在docker中运行rails应用，该应用会为我们默认启动一个`3000端口`的服务，在外部mac环境可以访问到；至此，初步完成docker的后端环境配置。
   ```sh
     bundle exe rails s
+  ```
+
+  6、使用rails的`基础操作`记录
+  (1) 建表 - 建立`postgresql` 中的一个`model`模型
+  ```sh
+    # 在docker的rails应用目录 -> 首先建立user模型，具备emial和name字段
+    bin/rails g model user email:string name:string
+  ```
+  可以发现会为我们创建一个继承于 `ActiveRecord::Migration`类的user表
+  ```rb
+    class CreateUsers < ActiveRecord::Migration[7.0]
+      def change
+        create_table :users do |t| # |t|类似于箭头函数的参数
+          t.string :email
+          t.string :name
+          t.timestamps
+        end
+      end
+    end
+  ```
+  (2) 我们还可以在表中手动添加其他的`key`，或给某些字段添加`limit`等限制;然后再执行 `db:migrate` 来同步到数据库
+  ```sh
+    bin/rails db:migrate
+  ```
+  也可以执行 `db:rollback step=1` 撤销上一次的数据库保存操作
+  ```sh
+    bin/rails db:rollback step=1
+  ```
+  (3) 创建控制器 `controller`
+  ```rb
+    bin/rails g controller users show create
+  ```
+  (4) 我们可以进入 `config/routes.rb` 来 `创建路由`
+  ```rb
+    get '/users/:id', to: 'users#show'
+    post '/users/', to: 'users#create'
   ```
