@@ -1,12 +1,12 @@
 ## 一、 关于mock
 ```
   mock假数据是为了让开发变得更方便，市面上常见的工具如：apifox、postman等，都能快速完成mock能力；
-  本文主要介绍一下基于vite devServe和响应拦截的纯前端简易mock。
+  本文主要介绍一下基于vite devServer和响应拦截的纯前端简易mock。
 ```
 
-## 二、关于vite devServe
+## 二、关于vite devServer
 ```
-  我们知道，当vite devServe遇到一个不存在的地址，它并不会报404，而是永远渲染首页；即我们可以认为我们在vite devServer请求任何api都会有一个响应；那么基于这个思路我们可以结合axios来拦截响应，返回我们自定义的假数据来完成mock功能。
+  我们知道，当vite devServer遇到一个不存在的地址，它并不会报404，而是永远渲染首页；即我们可以认为我们在vite devServer请求任何api都会有一个响应；那么基于这个思路我们可以结合axios来拦截响应，返回我们自定义的假数据来完成mock功能。
 ```
 
 ## 三、核心代码实现
