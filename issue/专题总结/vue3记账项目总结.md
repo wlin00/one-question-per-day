@@ -63,6 +63,16 @@
 	// 	],
 	// 	"description": "Log output to console"
   // }
+  "React.FC": {
+		"prefix": "fc",
+		"body": [
+			"import * as React from 'react'",
+			"",
+			"export const $1: React.FC = () => {",
+			"  return <div>$2</div>",
+			"}"
+		]
+	},
   "Vue Component": {
     "prefix": "vbt", // vue3 + tsx base
     "body": [
