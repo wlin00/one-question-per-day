@@ -63,13 +63,15 @@
 	// 	],
 	// 	"description": "Log output to console"
   // }
-  "React.FC": {
+	"React.FC": {
 		"prefix": "fc",
 		"body": [
 			"import * as React from 'react'",
 			"",
 			"export const $1: React.FC = () => {",
-			"  return <div>$2</div>",
+			"  return (",
+			"    <div>$2</div>",
+			"  )",
 			"}"
 		]
 	},
