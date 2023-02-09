@@ -1,8 +1,8 @@
 **题目：**
- 写一个useCountDown的倒计时hook
+ 写一个useCountDown的倒计时hook，要求能够让用户手动开关倒计时
 
 > `Vue`版本
-1、使用
+1、代码
  ```typescript
   <button :disabled="pending" @click="handleClick">{{ display }}</button>
   import useCountDown from '@/utils/useCountDown'
@@ -56,3 +56,47 @@
   }
   export default useCountDown
  ```
+
+> `React`版本
+1、代码
+```typescript
+  import { useState, useEffect } from 'react'
+  export const useCountDown = (seconds: number = 60) => {
+    const [count, setCount] = useState<number>(seconds)
+    const [pending, setPending] = useState<boolean>(false)
+
+    const startCountDown = () => {
+      setPending(true)
+    }
+    const stopCountDown = () => {
+      setPending(false)
+    }
+    const resetCountDown = () => {
+      setPending(false)
+      setCount(seconds)
+    }
+
+    useEffect(() => {
+      let timerId: NodeJS.Timeout | null = null
+      if (!pending) {
+        return
+      }
+      if (count < 1) {
+        resetCountDown()
+        return
+      }
+      timerId = setTimeout(() => {
+        setCount(count - 1)
+      }, 1000)
+      return () => clearTimeout(timerId!)
+    }, [count, pending])
+
+    return {
+      count,
+      pending,
+      startCountDown,
+      stopCountDown,
+      resetCountDown,
+    }
+  }
+```
