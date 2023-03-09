@@ -150,3 +150,24 @@
     get '/users/:id', to: 'users#show'
     post '/users/', to: 'users#create'
   ```
+
+  **7、前端部署关键点：**
+  ```typescript
+    1、管理公司测试服务器环境，了解linux常见命令以及docker/nginx，并通过docker镜像与nginx的转发独立完成前端部署
+    2、独立编写和管理前端项目的Dockerfile，并将nginx配置文件放在项目中独立管理，并独立编写ci文件（如DockerFile的ADD命令会添加内容到镜像，如果是tar的压缩包，会自动解压缩；也可以是文件、路径或链接）
+      Dockerfile - ADD：添加内容到镜像
+      Dockerfile - RUN：创建镜像
+      Dockerfile - ENV：制定镜像的环境
+      Dockerfile - CMD：Docker镜像被启动后容器默认执行的命令
+      Dockerfile - ENTRYPOINT：容器启动时第一个执行的命令和参数
+    3、Dockerfile优化
+      - 构建缓存：如果依赖没变，则不重新安装依赖，而复用之前的，先ADD添加Gemfile、Gemfile.lick、vendor/cache, 然后创建镜像RUN bundle install --local（GEMFILE、GEMFILE.lock、vendor未变，则RUN bundle install则不会变而是使用缓存），一般将一些不常改动的文件放Dockerfile的前面
+      - 多阶段构建：在Dockerfile中使用多个FROM指令，每个FROM指令可以使用不同的基镜像，且每条FROM指令会开始新阶段的构建。在多阶段构建中，我们可以将资源从一个阶段复制到另一个阶段，大幅度减少镜像体积，优化前端部署时间
+      （tip小问题：镜像为什么需要上传和下载：在公司里镜像一般是需要先在一个系统构建，然后可能在另一个系统里进行部署，所以这之间的传输就设计了上传和下载）
+    4、熟悉nginx和webpack的hash资源强缓存配置：
+      - 什么是强缓存：浏览器不会再次向服务器发起请求而是去缓存里取资源，Cache Control设置max age；CDN上也会有一层缓存，这样拿资源可以更快
+      - 为何可以对hash资源配置长期强缓存：因为资源一旦改变，打包后的hash也会发生改变，这样可以作为资源是否更新的标识，因此可以对hash资源加上长期强缓存
+      - 如何对hash缓存进行强化：hash缓存有一个缺陷，即一个文件发生改变，则依赖它的chunk也会更新，一般来说可以固定模块id+固定chunkid来做到缓存优化（即一个模块引入两个chunk，其中一个变了，打包出来的另外一个chunk依然可以走缓存）
+    5、nginx的try_files 适配history路由
+    6、静态资源上传cdn
+  ```
