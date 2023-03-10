@@ -293,7 +293,7 @@
     2、根据缓存黑白名单进行匹配，决定是否缓存，若不缓存则返回组件实例；若缓存则进行下一步；
     3、根据组件ID和tag生成缓存key，并在缓存对象中查找是否有这个key
       若存在：取出key并重新设置key来更新其使用时间（类似LRU）；
-      若没有：在this.cache存储当前组件实例并保存key的值，再检查当前缓存实例个数是否超过最大值，是的话删除最近最久未使用的那个缓存实例（下标为0的key）；
+      若没有：在this.cache存储当前组件实例并保存key的值，再检查当前缓存实例个数是否超过最大值，是的话（在下一个新实例创建之前）删除最近最久未使用的那个缓存实例（下标为0的key）；
 
     vue3中的keep-alive是用了LRU算法：
       class LRUCache {
@@ -325,3 +325,13 @@
         }
       }
   ```
+
+**题目10**
+> Vue - 事件中心
+```ts
+  - Vue的事件中心也基于发布订阅模式，模版编译的parseHTML时，vue会对属性和事件进行收集；
+  - vm实例会创建一个对象来保存所有要监听的事件：vm._events = {}, 自定义事件中心主要支持: this.$on、$emit、$off、$once方法
+  - 子组件初始化时，会走选项合并+initEvents，然后如果当前 VNode 有事件，则调用 updateComponentListeners
+  - 原生 DOM 事件其实最终调用的还是原生事件的 addEventListener 和 removeEventListener 方法绑定和移出事件。patch 过程中的创建阶段和更新阶段都会执行 updateDOMListeners 方法,每次都会遍历 on 去添加事件监听，遍历 oldOn 去移除事件监听
+  - vue对于事件的处理则是根据发布订阅map中的事件名key去操作对应的事件回调数组，批量地添加和移除监听
+```
