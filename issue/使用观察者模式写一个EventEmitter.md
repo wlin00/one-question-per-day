@@ -44,5 +44,13 @@ emitter2.emit('hi', 'Jerry', 12)
         this.events[eventName].forEach((fn) => fn.apply(this, args))
       }
     }
+    once(eventName, fn) { // 只执行一次的订阅
+      let self = this
+      self.on(eventName, callbackFn)
+      function callbackFn(...args) {
+        fn.call(this, ...args)
+        self.off(eventName, callbackFn)
+      }
+    }
   }
 ```
