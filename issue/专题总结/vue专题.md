@@ -335,3 +335,12 @@
   - 原生 DOM 事件其实最终调用的还是原生事件的 addEventListener 和 removeEventListener 方法绑定和移出事件。patch 过程中的创建阶段和更新阶段都会执行 updateDOMListeners 方法,每次都会遍历 on 去添加事件监听，遍历 oldOn 去移除事件监听
   - vue对于事件的处理则是根据发布订阅map中的事件名key去操作对应的事件回调数组，批量地添加和移除监听
 ```
+
+**题目11**
+> Vue computed的实现原理
+在`Vue`中，`computed`是一种特殊的`响应式数据`，他会根据依赖的数据动态地计算一个新的值，并且只有当依赖的数据发生改变的时候，它才会重新计算计算属性的值，并将结果缓存起来。
+```ts
+  // 实现原理
+  1、将computed的属性转化为一个Watcher实例，这个watcher实例会收集computed所依赖的响应式数据，并只有当响应式数据变化的时候重新计算computed。在收集依赖的过程中，computed通过Dep类来建立计算属性和响应式数据之间的关系。
+  2、第二步是在收集完依赖之后，将computed的值缓存起来，这个缓存过程是通过watcher实现的。在Watcher实例中，有一个dirty属性，用来表示computed是否需要重新计算（dirty为true代表需要重新计算）然后在初始情况，computed的值是未被计算的，dirty为true，当计算属性第一次被访问的时候，Watcher实例会进行计算并缓存计算结果；在之后的计算中，当computed依赖的响应式数据发生了变化才回重新计算并把dirty重置为true。
+```
