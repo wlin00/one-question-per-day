@@ -1,4 +1,4 @@
-**题目1 Vue和React的区别 & 未来发展趋势**：
+**章节1 Vue和React的区别 & 未来发展趋势**：
 ## 1）简介
 - React: 核心是声明式渲染、组件化和单向数据流。利用纯函数的思想；写法是JSX+inline style 或css in js；
 - Vue: 核心是组件化和双向绑定，是渐进式的MVVM框架；写法是sfc的模版语法，上手更容易。
@@ -42,5 +42,42 @@ React团队做的改善开发体验的努力
   4、引用稳定，无需useCallback；Vue3的setup中声明的所有函数都是固定的引用（return了包含自由变量 + 函数的闭包，而不是重复调用函数），所以不需要useCallback、useMemo的优化手段。
   5、Vue3 的proxy实现数据挟持，可以拦截到深层级的数据，同时使用weakMap收集已代理的依赖，方便垃圾回收用完的对象，采用了懒代理；同时将虚拟Dom性能与模版大小解耦，与动态节点数量正相关，并且compile会主动检测静态节点将他们提升到render之外来提示渲染性能，然后是Vue3使用了ESM导出全局APi和内部组件对Tree Shaking更友好；经尤大统计，Vue3运行时代码是13.5kb，而Vue2是22.5kb。这表示Vue3具备优越的性能；
   6、即使是这样Vue团队仍然在研究进一步提升性能的项目：Vue Vapor Mode，它支持在解析template的时候走另一个Vapor模式，一个更类似Solid的输出，是更具备卓越性能的模版策略。
+```
+
+**章节2 React18新特性总结**：
+## 1）核心特征：concurrent
+```ts
+  concurrent：渲染可中断，以前的React中的update是同步渲染，在渲染任务完成前不可中断。React主要依靠自身fiber结构的链表来实现此功能，即改变fiber指针的指向来实现中断、废弃的update丢弃、状态复用等机制。
+```
+## 2）新增功能：React18基于concurrent基础，实现了如Suspense、transitions、流式服务端渲染等功能。
+```ts
+  1、createRoot：曾经使用ReactDOM.render创建一个初次的渲染或更新，现在使用createRoot，目的是复用创建root元素这一步骤
+    const root = createRoot(document.getElementById('root')) // 根元素创建root对象，方便复用
+    root.render(jsx)
+  2、自动批量处理 Automatic Batching
+    // react18以前setState 并不会批量处理，React 会 render2次
+    setTimeout(() => {
+      setCount(c => c + 1)
+      setFlag(f => !f)
+    })
+    // react18: 自动批量处理，只render一次
+    setTimeout(() => {
+      setCount(c => c + 1)
+      setFlag(f => !f)
+    })
+  3、Suspense：等待目前UI加载，并且可以直接指定一个加载的界面，让它在用户等待的页面显示；理念上Suspense有点像catch，只不过Suspense捕获的不是异常，而是组件的“挂载中”状态suspending
+    <Suspense fallback={<Spinner />}>
+      <Comments />
+    </Suspense>
+  4、transition：React把更新分成urgent update紧急更新 和 transition update过渡更新，过渡更新是把UI从一个视图改向另一个视图，这种更新优先级较低；使用 const [isPending, startTransition] = useTransition(), 也可更好代替setTimeout；startTransition相比setTimeout不会延迟调度而是立即执行，startTransition 会给本次更新添加一个“transition”的标记，而这个标记会作为React内部更新的一个参考条件；
+  5、useDeferredValue：延迟更新某个不那么重要的部分，类似防抖debounce
+    // state & defferdText
+    const [text, setText] = useState('hello')
+    const deferredText = useDeferredValue(text)
+    // urgent ui
+    <input value={text} onChange={handleChange} />
+    // transition ui
+    <MySlowList text={deferredText} />
+    
 ```
 
