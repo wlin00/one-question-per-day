@@ -354,3 +354,10 @@
   1、将computed的属性转化为一个Watcher实例，这个watcher实例会收集computed所依赖的响应式数据，并只有当响应式数据变化的时候重新计算computed。在收集依赖的过程中，computed通过Dep类来建立计算属性和响应式数据之间的关系。
   2、第二步是在收集完依赖之后，将computed的值缓存起来，这个缓存过程是通过watcher实现的。在Watcher实例中，有一个dirty属性，用来表示computed是否需要重新计算（dirty为true代表需要重新计算）然后在初始情况，computed的值是未被计算的，dirty为true，当计算属性第一次被访问的时候，Watcher实例会进行计算并缓存计算结果；在之后的计算中，当computed依赖的响应式数据发生了变化才回重新计算并把dirty重置为true。
 ```
+
+**题目12**
+Vue Router 和 VueX 源码分析
+```ts
+1、Vue Router：https://blog.csdn.net/weixin_50786692/article/details/120527997
+2、VueX：https://blog.csdn.net/weixin_39843414/article/details/103640539
+```
