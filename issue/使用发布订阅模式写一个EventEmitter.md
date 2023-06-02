@@ -1,4 +1,4 @@
-基于观察者模式 完成 EventEmitter 模块，它是一个类，它的实例具有以下几个方法：on、emit、off：
+基于发布订阅模式 完成 EventEmitter 模块，它是一个类，它的实例具有以下几个方法：on、emit、off：
 
 ```javascript
 const emitter = new EventEmitter()
