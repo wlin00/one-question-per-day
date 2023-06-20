@@ -156,3 +156,197 @@
   git push -f -u origin gh-pages &&
   cd -
 ```
+
+
+## 2、React Render & Commit 过程描述
+可以想象一下，组件像`厨房里的厨师`，从食材中组装出美味的菜肴，在这种情况下，`React`就像是`服务员`，接受来自`顾客的请求`并将他们的`订单`交给`厨房`，UI请求和服务的过程有三个步骤：
+```ts
+  1、触发一个渲染：react将客人的订单（UI变化的请求）交给厨房（组件处理）
+  2、渲染组件：react在厨房（组件处理）准备订单（UI变化）
+  3、提交到DOM：react将订单（UI变化请求）放在桌子上（更新到Dom）
+```
+
+## 3、React批处理快照
+实现一个`getFinalState`方法来模拟react状态的批量更新，`getFinalState`方法接收两个参数：
+1、`baseState`, 即一个起始状态如 `const [baseState, setBaseState] = useState(0)`
+2、存储状态批量更新的队列`queue`，如：`[1, 1, 1]` 或 `[1, n => n + 1]` 或 `[5, n => n+1, 42]`
+```ts
+  三个输入示例代码的期望输出是：
+  (1) baseState = 0, queue = [1, 1, 1]：输出1，因为三次快照都是1，则直接将原数据baseState赋值为1
+  (2) baseState = 0, queue = [1, n => n + 1]：输出2，队列第一项是1，则将原数据baseState赋值为1；第二项为函数，则输入当前状态执行函数获得2
+  (3) baseState = 0, queue = [5, n => n + 1, 42]：输出42，队列第一项是1，则将原数据baseState赋值为1；第二项为函数，则输入当前状态执行函数获得2；队列第一项是42，则将原数据baseState赋值为42
+```
+下面实现`getFinalState(baseState, queue)`方法，来模拟react中的批量更新处理，该方法可获取最新的状态
+```ts
+  export function getFinalState(baseState, queue) {
+    let finalState = baseState
+    queue.forEach((update) => {
+      if (typeof update === 'function') { // Apply the updater function.
+        finalState = update(finalState)
+      } else { // Replace the next state.
+        finalState = update
+      }
+    })
+    return finalState
+  }
+```
+
+## 4、React更新Object中的状态
+```tsx
+  // 方法1，使用解构运算符更新
+  import { useState } from 'react'
+  export default function Form() {
+    const [obj, setObj] = useState({
+      name: 'Niki de Saint Phalle',
+      artwork: {
+        title: 'Blur Nana',
+        city: 'Hamburg',
+        image: 'https: //i.imgur.com/Sd1AgUOm.jpg',
+      }
+    })
+    // 更新Object中的状态
+    const handleTitleChange = (e) => {
+      setObj({
+        ...obj,
+        artwork: {
+          ...obj.artwork,
+          name: e.target.value,
+        }
+      })
+    }
+    return (
+      <label>Title:
+        <input
+          value={obj.artwork.title}
+          onChange={handleTitleChange}
+        />
+      </label>
+    )
+  }
+  // 方法2，使用《useImmer》库快速修改
+  import { useImmer } from 'react'
+  export default function Form() {
+    const [obj, setObj] = useImmer({
+      name: 'Niki de Saint Phalle',
+      artwork: {
+        title: 'Blue Nana',
+        city: 'Hamburg',
+        image: 'https://i.imgur.com/Sd1AgUOm.jpg',
+      }
+    })
+    // 更新Object中的状态
+    const handleTitleChange = (e) => {
+      setObj((draft) => {
+        draft.artwork.title = e.target.value // draft指向当前obj状态的引用，可以直接修改
+      })
+    }
+    return (
+      <label>Title:
+        <input
+          value={obj.artwork.title}
+          onChange={handleTitleChange}
+        />
+      </label>
+    )
+  }
+```
+
+## 4、React更新Array中的状态
+```tsx
+  // 方法1，使用解构运算符更新
+  import { useState } from 'react'
+  let nextId = 3
+  const initialList = [
+    { id: 0, title: 'title1', seen: false },
+    { id: 1, title: 'title2', seen: false },
+    { id: 2, title: 'title3', seen: true },
+  ]
+  export default function List() {
+    const [list, setList] = useState(initialList)
+    const handleToggle = (artId, status) => {
+      setList(list.map((item) => {
+        if (item.id === artId) {
+          return { ...item, seen: status }
+        } else {
+          return item
+        }
+      }))
+    }
+    return (
+      <>
+        <h1>List Title</h1>
+        <ItemList 
+          artworks={list}
+          onToggle={handleToggle}
+        />
+      </>
+    )
+  }
+  function ItemList({ artworks, onToggle }) => {
+    return (
+      <ul>
+        {artworks.map(artwork => (
+          <li key={artwork.id}>
+            <input
+              type="checkbox"
+              checked={artwork.seen}
+              onChange={e => {
+                onToggle(
+                  artwork.id,
+                  e.target.checked
+                )
+              }}
+            />
+          </li>
+        ))}
+      </ul>
+    )
+  }
+
+  // 方法2，使用《useImmer》库快速修改
+  import { useImmer } from 'react'
+  let nextId = 3
+  const initialList = [
+    { id: 0, title: 'title1', seen: false },
+    { id: 1, title: 'title2', seen: false },
+    { id: 2, title: 'title3', seen: true },
+  ]
+  export default function List() {
+    const [list, setList] = useState(initialList)
+    const handleToggle = (artId, status) => {
+      setList((draft) => {
+        const findItem = draft.find((item) => item.id === artId)
+        findItem.seen = status
+      })
+    }
+    return (
+      <>
+        <h1>List Title</h1>
+        <ItemList 
+          artworks={list}
+          onToggle={handleToggle}
+        />
+      </>
+    )
+  }
+  function ItemList({ artworks, onToggle }) => {
+    return (
+      <ul>
+        {artworks.map(artwork => (
+          <li key={artwork.id}>
+            <input
+              type="checkbox"
+              checked={artwork.seen}
+              onChange={e => {
+                onToggle(
+                  artwork.id,
+                  e.target.checked
+                )
+              }}
+            />
+          </li>
+        ))}
+      </ul>
+    )
+  }
+```
